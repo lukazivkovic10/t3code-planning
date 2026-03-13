@@ -29,6 +29,8 @@ import { makeEventNdjsonLogger } from "./provider/Layers/EventNdjsonLogger";
 import { TerminalManagerLive } from "./terminal/Layers/Manager";
 import { KeybindingsLive } from "./keybindings";
 import { GitManagerLive } from "./git/Layers/GitManager";
+import { KanbanRepositoryLive } from "./persistence/Layers/KanbanRepository";
+import { KanbanServiceLive } from "./kanban/Layers/KanbanService";
 import { GitCoreLive } from "./git/Layers/GitCore";
 import { GitHubCliLive } from "./git/Layers/GitHubCli";
 import { CodexTextGenerationLive } from "./git/Layers/CodexTextGeneration";
@@ -121,11 +123,17 @@ export function makeServerRuntimeServicesLayer() {
     Layer.provideMerge(textGenerationLayer),
   );
 
+  const kanbanLayer = KanbanServiceLive.pipe(
+    Layer.provideMerge(KanbanRepositoryLive),
+    Layer.provideMerge(orchestrationLayer),
+  );
+
   return Layer.mergeAll(
     orchestrationReactorLayer,
     gitCoreLayer,
     gitManagerLayer,
     terminalLayer,
     KeybindingsLive,
+    kanbanLayer,
   ).pipe(Layer.provideMerge(NodeServices.layer));
 }

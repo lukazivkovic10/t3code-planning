@@ -3,6 +3,7 @@ import {
   ChevronRightIcon,
   FolderIcon,
   GitPullRequestIcon,
+  KanbanIcon,
   PlusIcon,
   RocketIcon,
   SettingsIcon,
@@ -1377,6 +1378,25 @@ export default function Sidebar() {
 
                           <CollapsibleContent keepMounted>
                             <SidebarMenuSub className="mx-1 my-0 w-full translate-x-0 gap-0.5 px-1.5 py-0">
+                              {/* Kanban board link */}
+                              <SidebarMenuSubItem className="w-full">
+                                <SidebarMenuSubButton
+                                  render={<button type="button" />}
+                                  size="sm"
+                                  data-thread-selection-safe
+                                  className="h-6 w-full translate-x-0 justify-start gap-1.5 px-2 text-left text-xs text-muted-foreground/70 hover:bg-accent hover:text-foreground"
+                                  onClick={() => {
+                                    void navigate({
+                                      to: "/kanban/$projectId",
+                                      params: { projectId: project.id },
+                                    });
+                                  }}
+                                >
+                                  <KanbanIcon className="size-3" />
+                                  <span>Kanban</span>
+                                </SidebarMenuSubButton>
+                              </SidebarMenuSubItem>
+
                               {visibleThreads.map((thread) => {
                                 const isActive = routeThreadId === thread.id;
                                 const isSelected = selectedThreadIds.has(thread.id);

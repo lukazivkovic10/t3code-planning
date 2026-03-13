@@ -15,6 +15,8 @@ import {
   DEFAULT_PROVIDER_INTERACTION_MODE,
   type ClientOrchestrationCommand,
   type OrchestrationCommand,
+  KANBAN_WS_CHANNELS,
+  KANBAN_WS_METHODS,
   ORCHESTRATION_WS_CHANNELS,
   ORCHESTRATION_WS_METHODS,
   PROVIDER_SEND_TURN_MAX_IMAGE_BYTES,
@@ -77,6 +79,11 @@ import { AnalyticsService } from "./telemetry/Services/AnalyticsService.ts";
 import { expandHomePath } from "./os-jank.ts";
 import { makeServerPushBus } from "./wsServer/pushBus.ts";
 import { makeServerReadiness } from "./wsServer/readiness.ts";
+import { KanbanService } from "./kanban/Services/KanbanService.ts";
+import { KanbanRepository } from "./persistence/Services/KanbanRepository.ts";
+import { KanbanTaskReactor } from "./kanban/Services/KanbanTaskReactor.ts";
+import { KanbanTaskReactorLive } from "./kanban/Layers/KanbanTaskReactor.ts";
+import { ServerPushBusService } from "./wsServer/ServerPushBusService.ts";
 import { decodeJsonResult, formatSchemaError } from "@t3tools/shared/schemaJson";
 
 /**
@@ -217,7 +224,9 @@ export type ServerRuntimeServices =
   | TerminalManager
   | Keybindings
   | Open
-  | AnalyticsService;
+  | AnalyticsService
+  | KanbanService
+  | KanbanRepository;
 
 export class ServerLifecycleError extends Schema.TaggedErrorClass<ServerLifecycleError>()(
   "ServerLifecycleError",
@@ -603,6 +612,7 @@ export const createServer = Effect.fn(function* (): Effect.fn.Return<
   const checkpointDiffQuery = yield* CheckpointDiffQuery;
   const orchestrationReactor = yield* OrchestrationReactor;
   const { openInEditor } = yield* Open;
+  const kanbanService = yield* KanbanService;
 
   const subscriptionsScope = yield* Scope.make("sequential");
   yield* Effect.addFinalizer(() => Scope.close(subscriptionsScope, Exit.void));
@@ -619,6 +629,15 @@ export const createServer = Effect.fn(function* (): Effect.fn.Return<
   ).pipe(Effect.forkIn(subscriptionsScope));
 
   yield* Scope.provide(orchestrationReactor.start, subscriptionsScope);
+
+  yield* Effect.provide(
+    Effect.gen(function* () {
+      const kanbanTaskReactor = yield* KanbanTaskReactor;
+      yield* Scope.provide(kanbanTaskReactor.start, subscriptionsScope);
+    }),
+    KanbanTaskReactorLive.pipe(Layer.provide(Layer.succeed(ServerPushBusService, pushBus))),
+  );
+
   yield* readiness.markOrchestrationSubscriptionsReady;
 
   let welcomeBootstrapProjectId: ProjectId | undefined;
@@ -881,6 +900,70 @@ export const createServer = Effect.fn(function* (): Effect.fn.Return<
         const body = stripRequestTag(request.body);
         const keybindingsConfig = yield* keybindingsManager.upsertKeybindingRule(body);
         return { keybindings: keybindingsConfig, issues: [] };
+      }
+
+      case KANBAN_WS_METHODS.getBoardConfig: {
+        const body = stripRequestTag(request.body);
+        return yield* kanbanService.getBoardConfig(body);
+      }
+
+      case KANBAN_WS_METHODS.updateBoardConfig: {
+        const body = stripRequestTag(request.body);
+        const config = yield* kanbanService.updateBoardConfig(body);
+        yield* pushBus
+          .publishAll(KANBAN_WS_CHANNELS.domainEvent, { type: "config.updated", config })
+          .pipe(Effect.ignore);
+        return config;
+      }
+
+      case KANBAN_WS_METHODS.listTasks: {
+        const body = stripRequestTag(request.body);
+        return yield* kanbanService.listTasks(body);
+      }
+
+      case KANBAN_WS_METHODS.createTask: {
+        const body = stripRequestTag(request.body);
+        const task = yield* kanbanService.createTask(body);
+        yield* pushBus
+          .publishAll(KANBAN_WS_CHANNELS.domainEvent, { type: "task.created", task })
+          .pipe(Effect.ignore);
+        return task;
+      }
+
+      case KANBAN_WS_METHODS.updateTask: {
+        const body = stripRequestTag(request.body);
+        const task = yield* kanbanService.updateTask(body);
+        yield* pushBus
+          .publishAll(KANBAN_WS_CHANNELS.domainEvent, { type: "task.updated", task })
+          .pipe(Effect.ignore);
+        return task;
+      }
+
+      case KANBAN_WS_METHODS.moveTask: {
+        const body = stripRequestTag(request.body);
+        const task = yield* kanbanService.moveTask(body);
+        yield* pushBus
+          .publishAll(KANBAN_WS_CHANNELS.domainEvent, { type: "task.moved", task })
+          .pipe(Effect.ignore);
+        return task;
+      }
+
+      case KANBAN_WS_METHODS.stopTask: {
+        const body = stripRequestTag(request.body);
+        const task = yield* kanbanService.stopTask(body);
+        yield* pushBus
+          .publishAll(KANBAN_WS_CHANNELS.domainEvent, { type: "task.moved", task })
+          .pipe(Effect.ignore);
+        return task;
+      }
+
+      case KANBAN_WS_METHODS.deleteTask: {
+        const body = stripRequestTag(request.body);
+        const { taskId, projectId } = yield* kanbanService.deleteTask(body);
+        yield* pushBus
+          .publishAll(KANBAN_WS_CHANNELS.domainEvent, { type: "task.deleted", taskId, projectId })
+          .pipe(Effect.ignore);
+        return null;
       }
 
       default: {
