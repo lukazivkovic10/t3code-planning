@@ -7,6 +7,7 @@ import {
   ProjectId,
   ThreadId,
   TrimmedNonEmptyString,
+  KanbanThreadStatus,
 } from "@t3tools/contracts";
 import { Schema, ServiceMap } from "effect";
 import type { Effect, Option } from "effect";
@@ -24,6 +25,10 @@ export const KanbanTaskRow = Schema.Struct({
   agentFindings: Schema.NullOr(Schema.String),
   errorComments: Schema.Array(KanbanTaskError),
   todos: Schema.Array(KanbanTodo),
+  color: Schema.NullOr(Schema.String),
+  icon: Schema.NullOr(Schema.String),
+  tag: Schema.NullOr(Schema.String),
+  threadStatus: Schema.NullOr(KanbanThreadStatus),
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,
 });

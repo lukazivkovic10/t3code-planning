@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { type DragEndEvent, DndContext, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import {
   KANBAN_DEFAULT_IN_PROGRESS_PROMPT,
@@ -16,6 +17,7 @@ import { useKanbanStore } from "~/kanbanStore";
 import { useStore } from "~/store";
 import { KanbanColumn } from "./KanbanColumn";
 import { KanbanBoardSettings } from "./KanbanBoardSettings";
+import { KanbanTaskModal } from "./KanbanTaskModal";
 
 const COLUMNS: KanbanColumnId[] = ["waiting", "planning", "in_progress", "testing", "complete"];
 
@@ -40,6 +42,40 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
     updatedAt: new Date().toISOString(),
   };
 
+  // Shortcut state: open/close New Task modal
+  const [isNewTaskOpen, setIsNewTaskOpen] = useState(false);
+
+  // Global keyboard handler: Ctrl/Cmd + T opens create-task modal.
+  // Ignore when focus is in an editable element (input/textarea/contenteditable).
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      // check modifier (ctrl for Windows/Linux, meta for macOS)
+      if (!(e.ctrlKey || e.metaKey)) return;
+      if (e.key.toLowerCase() !== "t") return;
+
+      const active = document.activeElement as HTMLElement | null;
+      if (active) {
+        const tag = active.tagName;
+        const isEditable =
+          active.isContentEditable ||
+          tag === "INPUT" ||
+          tag === "TEXTAREA" ||
+          (active.getAttribute && active.getAttribute("role") === "textbox");
+        if (isEditable) {
+          // Don't hijack typing inside forms or editors
+          return;
+        }
+      }
+
+      // Prevent default browser action (new tab). Note: browser behavior may differ.
+      e.preventDefault();
+      setIsNewTaskOpen(true);
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
   function getTasksByColumn(column: KanbanColumnId): KanbanTask[] {
@@ -59,18 +95,24 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
     // waiting → planning OR in_progress
     // planning → in_progress
     const isAllowedMove =
-      (task.column === "waiting" && (targetColumn === "planning" || targetColumn === "in_progress")) ||
+      (task.column === "waiting" &&
+        (targetColumn === "planning" || targetColumn === "in_progress")) ||
       (task.column === "planning" && targetColumn === "in_progress");
 
     if (!isAllowedMove) return;
 
     // Check planning approval gate
-    if (task.column === "planning" && targetColumn === "in_progress" && config.requirePlanningApproval) {
+    if (
+      task.column === "planning" &&
+      targetColumn === "in_progress" &&
+      config.requirePlanningApproval
+    ) {
       const acceptedCount = task.todos.filter((t) => t.accepted).length;
       if (acceptedCount === 0) {
         toastManager.add({
           type: "warning",
-          title: "Planning approval required — accept at least one todo before moving to In Progress.",
+          title:
+            "Planning approval required — accept at least one todo before moving to In Progress.",
         });
         return;
       }
@@ -97,11 +139,14 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
       <div className="flex items-center justify-between border-b px-6 py-3">
         <div className="flex items-baseline gap-2">
           <h2 className="text-sm font-semibold">Kanban Board</h2>
-          {projectName && (
-            <span className="text-sm text-muted-foreground">— {projectName}</span>
-          )}
+          {projectName && <span className="text-sm text-muted-foreground">— {projectName}</span>}
         </div>
-        <KanbanBoardSettings config={config} projectId={ProjectId.makeUnsafe(projectId)} workspaceRoot={workspaceRoot} tasks={tasks} />
+        <KanbanBoardSettings
+          config={config}
+          projectId={ProjectId.makeUnsafe(projectId)}
+          workspaceRoot={workspaceRoot}
+          tasks={tasks}
+        />
       </div>
 
       {/* Columns */}
@@ -117,6 +162,9 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
           ))}
         </div>
       </DndContext>
+
+      {/* New Task modal, create mode */}
+      <KanbanTaskModal open={isNewTaskOpen} onOpenChange={setIsNewTaskOpen} projectId={projectId} />
     </div>
   );
 }

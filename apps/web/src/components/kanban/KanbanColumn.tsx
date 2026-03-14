@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { PlusIcon } from "lucide-react";
+import { PlusIcon, Inbox, Calendar, Play, Bug, CheckCircle } from "lucide-react";
 import { useDroppable } from "@dnd-kit/core";
 import type { KanbanColumnId, KanbanTask } from "@t3tools/contracts";
 
@@ -16,6 +16,14 @@ const COLUMN_LABELS: Record<KanbanColumnId, string> = {
   complete: "Complete",
 };
 
+const COLUMN_ICONS: Record<KanbanColumnId, (props: any) => JSX.Element> = {
+  waiting: Inbox,
+  planning: Calendar,
+  in_progress: Play,
+  testing: Bug,
+  complete: CheckCircle,
+};
+
 interface KanbanColumnProps {
   column: KanbanColumnId;
   tasks: KanbanTask[];
@@ -27,13 +35,17 @@ export function KanbanColumn({ column, tasks, projectId }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: column });
 
   const isWaiting = column === "waiting";
+  const Icon = COLUMN_ICONS[column];
 
   return (
     <>
       <div className="flex min-w-[12rem] flex-1 flex-col gap-2 self-stretch">
         {/* Header */}
         <div className="flex items-center gap-2 px-1">
-          <h3 className="text-sm font-semibold">{COLUMN_LABELS[column]}</h3>
+          <h3 className="text-sm font-semibold flex items-center gap-2">
+            <Icon className="h-4 w-4 text-muted-foreground" />
+            {COLUMN_LABELS[column]}
+          </h3>
           <span className="ml-auto rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
             {tasks.length}
           </span>
@@ -47,7 +59,13 @@ export function KanbanColumn({ column, tasks, projectId }: KanbanColumnProps) {
             isOver ? "border-primary/50 bg-primary/5" : "border-transparent bg-muted/30",
             isWaiting && "cursor-pointer",
           )}
-          onClick={isWaiting ? (e) => { if (e.target === e.currentTarget) setCreateOpen(true); } : undefined}
+          onClick={
+            isWaiting
+              ? (e) => {
+                  if (e.target === e.currentTarget) setCreateOpen(true);
+                }
+              : undefined
+          }
         >
           {tasks.map((task) => (
             <KanbanCard key={task.id} task={task} />

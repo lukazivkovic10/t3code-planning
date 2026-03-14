@@ -31,23 +31,38 @@ interface KanbanBoardSettingsProps {
 type Tab = "planning" | "in_progress" | "testing" | "project_files";
 
 const TABS: { id: Tab; label: string }[] = [
+  { id: "project_files", label: "Project Files" },
   { id: "planning", label: "Planning" },
   { id: "in_progress", label: "In Progress" },
   { id: "testing", label: "Testing" },
-  { id: "project_files", label: "Project Files" },
 ];
 
 type FileState = { content: string; loading: boolean; saving: boolean };
 
-const INITIAL_FILE_STATE: FileState = { content: "", loading: false, saving: false };
+const INITIAL_FILE_STATE: FileState = {
+  content: "",
+  loading: false,
+  saving: false,
+};
 
-export function KanbanBoardSettings({ config, projectId, workspaceRoot, tasks }: KanbanBoardSettingsProps) {
+export function KanbanBoardSettings({
+  config,
+  projectId,
+  workspaceRoot,
+  tasks,
+}: KanbanBoardSettingsProps) {
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("planning");
-  const [inProgressPrompt, setInProgressPrompt] = useState(config.inProgressPrompt);
+  const [inProgressPrompt, setInProgressPrompt] = useState(
+    config.inProgressPrompt,
+  );
   const [testingPrompt, setTestingPrompt] = useState(config.testingPrompt);
-  const [planningPrompt, setPlanningPrompt] = useState(config.planningPrompt ?? KANBAN_DEFAULT_PLANNING_PROMPT);
-  const [requirePlanningApproval, setRequirePlanningApproval] = useState(config.requirePlanningApproval ?? false);
+  const [planningPrompt, setPlanningPrompt] = useState(
+    config.planningPrompt ?? KANBAN_DEFAULT_PLANNING_PROMPT,
+  );
+  const [requirePlanningApproval, setRequirePlanningApproval] = useState(
+    config.requirePlanningApproval ?? false,
+  );
   const [saving, setSaving] = useState(false);
   const [agentsMd, setAgentsMd] = useState<FileState>(INITIAL_FILE_STATE);
   const [claudeMd, setClaudeMd] = useState<FileState>(INITIAL_FILE_STATE);
@@ -73,13 +88,27 @@ export function KanbanBoardSettings({ config, projectId, workspaceRoot, tasks }:
       api.projects.readFile({ cwd: workspaceRoot, relativePath: "AGENTS.md" }),
       api.projects.readFile({ cwd: workspaceRoot, relativePath: "CLAUDE.md" }),
     ]);
-    setAgentsMd({ content: agents.contents ?? "", loading: false, saving: false });
-    setClaudeMd({ content: claude.contents ?? "", loading: false, saving: false });
+    setAgentsMd({
+      content: agents.contents ?? "",
+      loading: false,
+      saving: false,
+    });
+    setClaudeMd({
+      content: claude.contents ?? "",
+      loading: false,
+      saving: false,
+    });
   }
 
   function handleTabChange(tab: Tab) {
     setActiveTab(tab);
-    if (tab === "project_files" && !agentsMd.loading && agentsMd.content === "" && !claudeMd.loading && claudeMd.content === "") {
+    if (
+      tab === "project_files" &&
+      !agentsMd.loading &&
+      agentsMd.content === "" &&
+      !claudeMd.loading &&
+      claudeMd.content === ""
+    ) {
       void loadProjectFiles();
     }
   }
@@ -103,19 +132,30 @@ export function KanbanBoardSettings({ config, projectId, workspaceRoot, tasks }:
     }
   }
 
-  async function handleSaveFile(relativePath: string, content: string, setState: React.Dispatch<React.SetStateAction<FileState>>) {
+  async function handleSaveFile(
+    relativePath: string,
+    content: string,
+    setState: React.Dispatch<React.SetStateAction<FileState>>,
+  ) {
     const api = readNativeApi();
     if (!api || !workspaceRoot) return;
     setState((s) => ({ ...s, saving: true }));
     try {
-      await api.projects.writeFile({ cwd: workspaceRoot, relativePath, contents: content });
+      await api.projects.writeFile({
+        cwd: workspaceRoot,
+        relativePath,
+        contents: content,
+      });
       toastManager.add({ type: "success", title: `${relativePath} saved` });
     } finally {
       setState((s) => ({ ...s, saving: false }));
     }
   }
 
-  async function handleGenerateWithAI(fileName: "AGENTS.md" | "CLAUDE.md", currentContent: string) {
+  async function handleGenerateWithAI(
+    fileName: "AGENTS.md" | "CLAUDE.md",
+    currentContent: string,
+  ) {
     const api = readNativeApi();
     if (!api) return;
 
@@ -145,8 +185,14 @@ export function KanbanBoardSettings({ config, projectId, workspaceRoot, tasks }:
 
   return (
     <>
-      <Button size="icon" variant="ghost" onClick={handleOpen} title="Board settings">
-        <SettingsIcon className="size-4" />
+      <Button
+        size="xs"
+        variant="outline"
+        onClick={handleOpen}
+        title="Board settings"
+      >
+        <SettingsIcon className="size-3.5" />
+        <span className="ml-1">Board settings</span>
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
@@ -181,7 +227,8 @@ export function KanbanBoardSettings({ config, projectId, workspaceRoot, tasks }:
                 <div className="flex flex-col gap-1.5">
                   <label className="text-sm font-medium">Agent Prompt</label>
                   <p className="text-xs text-muted-foreground">
-                    Instructions given to the AI when a task enters the Planning column.
+                    Instructions given to the AI when a task enters the Planning
+                    column.
                   </p>
                   <textarea
                     className="mt-1 min-h-40 w-full resize-y rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
@@ -192,9 +239,12 @@ export function KanbanBoardSettings({ config, projectId, workspaceRoot, tasks }:
 
                 <div className="flex items-center justify-between rounded-lg border px-4 py-3">
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-sm font-medium">Require approval before In Progress</span>
+                    <span className="text-sm font-medium">
+                      Require approval before In Progress
+                    </span>
                     <span className="text-xs text-muted-foreground">
-                      At least one todo must be accepted before the task can move forward.
+                      At least one todo must be accepted before the task can
+                      move forward.
                     </span>
                   </div>
                   <Switch
@@ -209,7 +259,8 @@ export function KanbanBoardSettings({ config, projectId, workspaceRoot, tasks }:
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium">Agent Prompt</label>
                 <p className="text-xs text-muted-foreground">
-                  Instructions given to the AI when a task enters the In Progress column.
+                  Instructions given to the AI when a task enters the In
+                  Progress column.
                 </p>
                 <textarea
                   className="mt-1 min-h-40 w-full resize-y rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
@@ -223,7 +274,8 @@ export function KanbanBoardSettings({ config, projectId, workspaceRoot, tasks }:
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium">Agent Prompt</label>
                 <p className="text-xs text-muted-foreground">
-                  Instructions given to the AI when a task enters the Testing column.
+                  Instructions given to the AI when a task enters the Testing
+                  column.
                 </p>
                 <textarea
                   className="mt-1 min-h-40 w-full resize-y rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
@@ -243,8 +295,16 @@ export function KanbanBoardSettings({ config, projectId, workspaceRoot, tasks }:
                   <>
                     {(
                       [
-                        { name: "AGENTS.md" as const, state: agentsMd, setState: setAgentsMd },
-                        { name: "CLAUDE.md" as const, state: claudeMd, setState: setClaudeMd },
+                        {
+                          name: "AGENTS.md" as const,
+                          state: agentsMd,
+                          setState: setAgentsMd,
+                        },
+                        {
+                          name: "CLAUDE.md" as const,
+                          state: claudeMd,
+                          setState: setClaudeMd,
+                        },
                       ] as const
                     ).map(({ name, state, setState }) => (
                       <div key={name} className="flex flex-col gap-1.5">
@@ -255,7 +315,13 @@ export function KanbanBoardSettings({ config, projectId, workspaceRoot, tasks }:
                               size="sm"
                               variant="outline"
                               disabled={state.loading || state.saving}
-                              onClick={() => void handleSaveFile(name, state.content, setState)}
+                              onClick={() =>
+                                void handleSaveFile(
+                                  name,
+                                  state.content,
+                                  setState,
+                                )
+                              }
                             >
                               {state.saving ? "Saving…" : "Save"}
                             </Button>
@@ -263,7 +329,9 @@ export function KanbanBoardSettings({ config, projectId, workspaceRoot, tasks }:
                               size="sm"
                               variant="outline"
                               disabled={state.loading}
-                              onClick={() => void handleGenerateWithAI(name, state.content)}
+                              onClick={() =>
+                                void handleGenerateWithAI(name, state.content)
+                              }
                             >
                               Generate with AI
                             </Button>
@@ -272,9 +340,15 @@ export function KanbanBoardSettings({ config, projectId, workspaceRoot, tasks }:
                         <textarea
                           className="mt-1 min-h-48 w-full resize-y rounded-lg border bg-background px-3 py-2 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
                           value={state.loading ? "" : state.content}
-                          placeholder={state.loading ? "Loading…" : `${name} content (empty if file doesn't exist)`}
+                          placeholder={
+                            state.loading
+                              ? "Loading…"
+                              : `${name} content (empty if file doesn't exist)`
+                          }
                           disabled={state.loading}
-                          onChange={(e) => setState((s) => ({ ...s, content: e.target.value }))}
+                          onChange={(e) =>
+                            setState((s) => ({ ...s, content: e.target.value }))
+                          }
                         />
                       </div>
                     ))}

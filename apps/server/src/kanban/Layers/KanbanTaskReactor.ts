@@ -32,8 +32,9 @@ const make = Effect.gen(function* () {
     const { threadId, session } = event.payload;
     const status = session.status;
 
-    // Only act on terminal session states
+    // Only act on terminal session states and running
     if (
+      status !== "running" &&
       status !== "idle" &&
       status !== "stopped" &&
       status !== "interrupted" &&
@@ -57,6 +58,41 @@ const make = Effect.gen(function* () {
 
     const now = new Date().toISOString();
 
+    // ── Agent is running: set threadStatus to running ─────────────────────
+
+    if (status === "running") {
+      const updated: KanbanTaskRow = {
+        ...task,
+        threadStatus: "running",
+        updatedAt: now,
+      };
+      yield* repository.upsertTask(updated);
+      yield* pushBus
+        .publishAll(KANBAN_WS_CHANNELS.domainEvent, {
+          type: "task.updated",
+          task: {
+            id: updated.id,
+            projectId: updated.projectId,
+            title: updated.title,
+            description: updated.description,
+            column: updated.column,
+            sortOrder: updated.sortOrder,
+            linkedThreadId: updated.linkedThreadId,
+            agentFindings: updated.agentFindings,
+            errorComments: updated.errorComments,
+            todos: updated.todos,
+            color: updated.color,
+            icon: updated.icon,
+            tag: updated.tag,
+            threadStatus: updated.threadStatus,
+            createdAt: updated.createdAt,
+            updatedAt: updated.updatedAt,
+          },
+        })
+        .pipe(Effect.ignore);
+      return;
+    }
+
     // ── Agent failed ──────────────────────────────────────────────────────
 
     if (status === "error") {
@@ -69,6 +105,7 @@ const make = Effect.gen(function* () {
         ...task,
         column: "waiting",
         linkedThreadId: null,
+        threadStatus: null,
         errorComments: [...task.errorComments, errorComment],
         updatedAt: now,
       };
@@ -87,6 +124,10 @@ const make = Effect.gen(function* () {
             agentFindings: updated.agentFindings,
             errorComments: updated.errorComments,
             todos: updated.todos,
+            color: updated.color,
+            icon: updated.icon,
+            tag: updated.tag,
+            threadStatus: updated.threadStatus,
             createdAt: updated.createdAt,
             updatedAt: updated.updatedAt,
           },
@@ -137,7 +178,7 @@ const make = Effect.gen(function* () {
       const updated: KanbanTaskRow = {
         ...task,
         todos,
-        linkedThreadId: null,
+        threadStatus: "idle",
         updatedAt: now,
       };
       yield* repository.upsertTask(updated);
@@ -155,6 +196,10 @@ const make = Effect.gen(function* () {
             agentFindings: updated.agentFindings,
             errorComments: updated.errorComments,
             todos: updated.todos,
+            color: updated.color,
+            icon: updated.icon,
+            tag: updated.tag,
+            threadStatus: updated.threadStatus,
             createdAt: updated.createdAt,
             updatedAt: updated.updatedAt,
           },
@@ -213,6 +258,7 @@ const make = Effect.gen(function* () {
         ...task,
         column: "testing",
         linkedThreadId: newThreadId,
+        threadStatus: "running",
         updatedAt: now,
       };
       yield* repository.upsertTask(updated);
@@ -230,6 +276,10 @@ const make = Effect.gen(function* () {
             agentFindings: updated.agentFindings,
             errorComments: updated.errorComments,
             todos: updated.todos,
+            color: updated.color,
+            icon: updated.icon,
+            tag: updated.tag,
+            threadStatus: updated.threadStatus,
             createdAt: updated.createdAt,
             updatedAt: updated.updatedAt,
           },
@@ -249,6 +299,7 @@ const make = Effect.gen(function* () {
         ...task,
         column: "complete",
         linkedThreadId: null,
+        threadStatus: null,
         agentFindings,
         updatedAt: now,
       };
@@ -267,6 +318,10 @@ const make = Effect.gen(function* () {
             agentFindings: updated.agentFindings,
             errorComments: updated.errorComments,
             todos: updated.todos,
+            color: updated.color,
+            icon: updated.icon,
+            tag: updated.tag,
+            threadStatus: updated.threadStatus,
             createdAt: updated.createdAt,
             updatedAt: updated.updatedAt,
           },

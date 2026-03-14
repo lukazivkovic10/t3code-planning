@@ -36,6 +36,10 @@ function taskRowToTask(row: KanbanTaskRow): KanbanTask {
     agentFindings: row.agentFindings,
     errorComments: row.errorComments,
     todos: row.todos,
+    color: row.color,
+    icon: row.icon,
+    tag: row.tag,
+    threadStatus: row.threadStatus,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -111,6 +115,10 @@ const makeKanbanService = Effect.gen(function* () {
         agentFindings: null,
         errorComments: [],
         todos: [],
+        color: input.color ?? null,
+        icon: input.icon ?? null,
+        tag: input.tag ?? null,
+        threadStatus: null,
         createdAt: now,
         updatedAt: now,
       };
@@ -130,6 +138,9 @@ const makeKanbanService = Effect.gen(function* () {
         ...existing,
         title: input.title ?? existing.title,
         description: input.description ?? existing.description,
+        color: input.color !== undefined ? input.color : existing.color,
+        icon: input.icon !== undefined ? input.icon : existing.icon,
+        tag: input.tag !== undefined ? input.tag : existing.tag,
         updatedAt: now,
       };
       yield* repository.upsertTask(updated);
@@ -255,11 +266,15 @@ const makeKanbanService = Effect.gen(function* () {
         linkedThreadId = newThreadId;
       }
 
+      const threadStatus =
+        input.column === "planning" || input.column === "in_progress" ? "running" : null;
+
       const updated: KanbanTaskRow = {
         ...existing,
         column: input.column,
         sortOrder: input.sortOrder,
         linkedThreadId,
+        threadStatus,
         updatedAt: now,
       };
       yield* repository.upsertTask(updated);
@@ -292,6 +307,7 @@ const makeKanbanService = Effect.gen(function* () {
         ...existing,
         column: "waiting",
         linkedThreadId: null,
+        threadStatus: null,
         updatedAt: now,
       };
       yield* repository.upsertTask(updated);

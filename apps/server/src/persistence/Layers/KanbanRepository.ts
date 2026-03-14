@@ -20,6 +20,7 @@ import {
   KanbanTaskError,
   KanbanTaskId,
   KanbanTodo,
+  KanbanThreadStatus,
   ProjectId,
   ThreadId,
   TrimmedNonEmptyString,
@@ -38,6 +39,10 @@ const KanbanTaskRawRow = Schema.Struct({
   agentFindings: Schema.NullOr(Schema.String),
   errorComments: Schema.String,
   todos: Schema.String,
+  color: Schema.NullOr(Schema.String),
+  icon: Schema.NullOr(Schema.String),
+  tag: Schema.NullOr(Schema.String),
+  threadStatus: Schema.NullOr(KanbanThreadStatus),
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,
 });
@@ -70,6 +75,10 @@ function rawToKanbanTaskRow(raw: KanbanTaskRawRow): KanbanTaskRow {
     agentFindings: raw.agentFindings,
     errorComments,
     todos,
+    color: raw.color,
+    icon: raw.icon,
+    tag: raw.tag,
+    threadStatus: raw.threadStatus,
     createdAt: raw.createdAt,
     updatedAt: raw.updatedAt,
   };
@@ -95,6 +104,10 @@ const makeKanbanRepository = Effect.gen(function* () {
         agent_findings AS "agentFindings",
         error_comments AS "errorComments",
         todos,
+        color,
+        icon,
+        tag,
+        thread_status AS "threadStatus",
         created_at AS "createdAt",
         updated_at AS "updatedAt"
       FROM kanban_tasks
@@ -118,6 +131,10 @@ const makeKanbanRepository = Effect.gen(function* () {
         agent_findings AS "agentFindings",
         error_comments AS "errorComments",
         todos,
+        color,
+        icon,
+        tag,
+        thread_status AS "threadStatus",
         created_at AS "createdAt",
         updated_at AS "updatedAt"
       FROM kanban_tasks
@@ -140,6 +157,10 @@ const makeKanbanRepository = Effect.gen(function* () {
         agent_findings AS "agentFindings",
         error_comments AS "errorComments",
         todos,
+        color,
+        icon,
+        tag,
+        thread_status AS "threadStatus",
         created_at AS "createdAt",
         updated_at AS "updatedAt"
       FROM kanban_tasks
@@ -161,6 +182,10 @@ const makeKanbanRepository = Effect.gen(function* () {
         agent_findings,
         error_comments,
         todos,
+        color,
+        icon,
+        tag,
+        thread_status,
         created_at,
         updated_at
       )
@@ -175,6 +200,10 @@ const makeKanbanRepository = Effect.gen(function* () {
         ${row.agentFindings},
         ${row.errorComments},
         ${row.todos},
+        ${row.color},
+        ${row.icon},
+        ${row.tag},
+        ${row.threadStatus},
         ${row.createdAt},
         ${row.updatedAt}
       )
@@ -188,6 +217,10 @@ const makeKanbanRepository = Effect.gen(function* () {
         agent_findings = excluded.agent_findings,
         error_comments = excluded.error_comments,
         todos = excluded.todos,
+        color = excluded.color,
+        icon = excluded.icon,
+        tag = excluded.tag,
+        thread_status = excluded.thread_status,
         created_at = excluded.created_at,
         updated_at = excluded.updated_at
     `,

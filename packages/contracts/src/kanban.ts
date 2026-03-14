@@ -9,9 +9,20 @@ const makeEntityId = <Brand extends string>(brand: Brand) =>
 export const KanbanTaskId = makeEntityId("KanbanTaskId");
 export type KanbanTaskId = typeof KanbanTaskId.Type;
 
+// ── Thread status ──────────────────────────────────────────────────────────
+
+export const KanbanThreadStatus = Schema.Literals(["running", "idle"]);
+export type KanbanThreadStatus = typeof KanbanThreadStatus.Type;
+
 // ── Column ─────────────────────────────────────────────────────────────────
 
-export const KanbanColumnId = Schema.Literals(["waiting", "planning", "in_progress", "testing", "complete"]);
+export const KanbanColumnId = Schema.Literals([
+  "waiting",
+  "planning",
+  "in_progress",
+  "testing",
+  "complete",
+]);
 export type KanbanColumnId = typeof KanbanColumnId.Type;
 
 // ── Todo (planning step) ───────────────────────────────────────────────────
@@ -58,6 +69,10 @@ export const KanbanTask = Schema.Struct({
   agentFindings: Schema.NullOr(Schema.String),
   errorComments: Schema.Array(KanbanTaskError),
   todos: Schema.Array(KanbanTodo),
+  color: Schema.NullOr(Schema.String),
+  icon: Schema.NullOr(Schema.String),
+  tag: Schema.NullOr(Schema.String),
+  threadStatus: Schema.NullOr(KanbanThreadStatus),
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,
 });
@@ -106,6 +121,9 @@ export const KanbanCreateTaskInput = Schema.Struct({
   projectId: ProjectId,
   title: TrimmedNonEmptyString,
   description: Schema.String,
+  color: Schema.optional(Schema.NullOr(Schema.String)),
+  icon: Schema.optional(Schema.NullOr(Schema.String)),
+  tag: Schema.optional(Schema.NullOr(Schema.String)),
 });
 export type KanbanCreateTaskInput = typeof KanbanCreateTaskInput.Type;
 
@@ -113,6 +131,9 @@ export const KanbanUpdateTaskInput = Schema.Struct({
   taskId: KanbanTaskId,
   title: Schema.optional(TrimmedNonEmptyString),
   description: Schema.optional(Schema.String),
+  color: Schema.optional(Schema.NullOr(Schema.String)),
+  icon: Schema.optional(Schema.NullOr(Schema.String)),
+  tag: Schema.optional(Schema.NullOr(Schema.String)),
 });
 export type KanbanUpdateTaskInput = typeof KanbanUpdateTaskInput.Type;
 

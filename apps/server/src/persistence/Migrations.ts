@@ -27,6 +27,9 @@ import Migration0012 from "./Migrations/012_ProjectionThreadsInteractionMode.ts"
 import Migration0013 from "./Migrations/013_ProjectionThreadProposedPlans.ts";
 import Migration0014 from "./Migrations/014_KanbanProjection.ts";
 import Migration0015 from "./Migrations/015_KanbanPlanningColumn.ts";
+import Migration0016 from "./Migrations/016_KanbanTaskColorIcon.ts";
+import Migration0017 from "./Migrations/017_KanbanTaskTag.ts";
+import Migration0018 from "./Migrations/018_KanbanTaskThreadStatus.ts";
 import { Effect } from "effect";
 
 /**
@@ -55,6 +58,9 @@ const loader = Migrator.fromRecord({
   "13_ProjectionThreadProposedPlans": Migration0013,
   "14_KanbanProjection": Migration0014,
   "15_KanbanPlanningColumn": Migration0015,
+  "16_KanbanTaskColorIcon": Migration0016,
+  "17_KanbanTaskTag": Migration0017,
+  "18_KanbanTaskThreadStatus": Migration0018,
 });
 
 /**

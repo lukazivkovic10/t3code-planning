@@ -1,16 +1,6 @@
 import { useState } from "react";
-import {
-  AlertCircleIcon,
-  ChevronDownIcon,
-  Loader2Icon,
-  PlusIcon,
-} from "lucide-react";
-import {
-  IsoDateTime,
-  ProjectId,
-  type KanbanTask,
-  type KanbanTodo,
-} from "@t3tools/contracts";
+import { AlertCircleIcon, ChevronDownIcon, Loader2Icon, PlusIcon } from "lucide-react";
+import { IsoDateTime, ProjectId, type KanbanTask, type KanbanTodo } from "@t3tools/contracts";
 
 import { readNativeApi } from "~/nativeApi";
 import { useKanbanStore } from "~/kanbanStore";
@@ -27,6 +17,8 @@ import { ToggleGroup, Toggle } from "~/components/ui/toggle-group";
 import {
   type TaskType,
   TASK_TYPE_CONFIG,
+  TASK_COLORS,
+  TASK_ICONS,
   parseDescription,
   compileDescription,
 } from "./kanbanTaskUtils";
@@ -40,12 +32,7 @@ interface KanbanTaskModalProps {
   projectId?: string;
 }
 
-export function KanbanTaskModal({
-  open,
-  onOpenChange,
-  task,
-  projectId,
-}: KanbanTaskModalProps) {
+export function KanbanTaskModal({ open, onOpenChange, task, projectId }: KanbanTaskModalProps) {
   const parsed = task
     ? parseDescription(task.description ?? "")
     : { type: "feature" as TaskType, detail: "", acceptance: "", hints: "" };
@@ -57,16 +44,15 @@ export function KanbanTaskModal({
   const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(1);
   const [taskType, setTaskType] = useState<TaskType>(parsed.type);
   const [taskDetail, setTaskDetail] = useState(parsed.detail);
-  const [acceptanceCriteria, setAcceptanceCriteria] = useState(
-    parsed.acceptance,
-  );
+  const [acceptanceCriteria, setAcceptanceCriteria] = useState(parsed.acceptance);
   const [technicalHints, setTechnicalHints] = useState(parsed.hints);
+  const [taskColor, setTaskColor] = useState<string | null>(task?.color ?? null);
+  const [taskIcon, setTaskIcon] = useState<string | null>(task?.icon ?? null);
+  const [taskTag, setTaskTag] = useState<string>(task?.tag ?? "");
 
   const handleDomainEvent = useKanbanStore((s) => s.handleDomainEvent);
 
-  const [todos, setTodos] = useState<KanbanTodo[]>(() => [
-    ...(task?.todos ?? []),
-  ]);
+  const [todos, setTodos] = useState<KanbanTodo[]>(() => [...(task?.todos ?? [])]);
   const [newTodoText, setNewTodoText] = useState("");
   const [savingTodos, setSavingTodos] = useState(false);
 
@@ -100,19 +86,20 @@ export function KanbanTaskModal({
     setTechnicalHints(p.hints);
     setTodos([...(task?.todos ?? [])]);
     setNewTodoText("");
+    setTaskColor(task?.color ?? null);
+    setTaskIcon(task?.icon ?? null);
+    setTaskTag(task?.tag ?? "");
   }
 
   async function handleTodoToggle(todoId: string) {
     if (!task) return;
     const api = readNativeApi();
     if (!api) return;
-    const updated = todos.map((t) =>
-      t.id === todoId ? { ...t, accepted: !t.accepted } : t,
-    );
+    const updated = todos.map((t) => (t.id === todoId ? { ...t, accepted: !t.accepted } : t));
     setTodos(updated);
     setSavingTodos(true);
     try {
-      const result = await api.kanban.updateTaskTodos({
+      const result = await (api.kanban as any).updateTaskTodos({
         taskId: task.id,
         todos: updated,
       });
@@ -137,7 +124,7 @@ export function KanbanTaskModal({
     setNewTodoText("");
     setSavingTodos(true);
     try {
-      const result = await api.kanban.updateTaskTodos({
+      const result = await (api.kanban as any).updateTaskTodos({
         taskId: task.id,
         todos: updated,
       });
@@ -162,24 +149,20 @@ export function KanbanTaskModal({
         const created = await api.kanban.createTask({
           projectId: pid,
           title,
-          description: compileDescription(
-            taskType,
-            taskDetail,
-            acceptanceCriteria,
-            technicalHints,
-          ),
+          description: compileDescription(taskType, taskDetail, acceptanceCriteria, technicalHints),
+          color: taskColor,
+          icon: taskIcon,
+          tag: taskTag.trim() || null,
         });
         handleDomainEvent({ type: "task.created", task: created });
       } else {
         const updated = await api.kanban.updateTask({
           taskId: task.id,
           title,
-          description: compileDescription(
-            taskType,
-            taskDetail,
-            acceptanceCriteria,
-            technicalHints,
-          ),
+          description: compileDescription(taskType, taskDetail, acceptanceCriteria, technicalHints),
+          color: taskColor,
+          icon: taskIcon,
+          tag: taskTag.trim() || null,
         });
         handleDomainEvent({ type: "task.updated", task: updated });
       }
@@ -270,15 +253,76 @@ export function KanbanTaskModal({
                       </Toggle>
                     </ToggleGroup>
                   </div>
+                  <div className="flex gap-3">
+                    <div className="flex flex-1 flex-col gap-1.5">
+                      <label className="text-sm font-medium">Title</label>
+                      <input
+                        className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        placeholder="Task title"
+                        autoFocus
+                      />
+                    </div>
+                    <div className="flex w-28 flex-col gap-1.5">
+                      <label className="text-sm font-medium text-muted-foreground">
+                        Tag <span className="font-normal">(optional)</span>
+                      </label>
+                      <input
+                        className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                        value={taskTag}
+                        onChange={(e) => setTaskTag(e.target.value)}
+                        placeholder="e.g. backend"
+                        maxLength={24}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-6">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-sm font-medium">Color</label>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          title="No color"
+                          onClick={() => setTaskColor(null)}
+                          className={`size-5 rounded-full border-2 bg-muted transition-all ${taskColor === null ? "border-foreground scale-110" : "border-transparent hover:border-muted-foreground/40"}`}
+                        />
+                        {TASK_COLORS.map((c) => (
+                          <button
+                            key={c.key}
+                            type="button"
+                            title={c.key}
+                            onClick={() => setTaskColor(taskColor === c.key ? null : c.key)}
+                            className={`size-5 rounded-full border-2 transition-all ${taskColor === c.key ? "border-foreground scale-110" : "border-transparent hover:border-muted-foreground/40"}`}
+                            style={{ backgroundColor: c.swatch }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-sm font-medium">Title</label>
-                    <input
-                      className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                      placeholder="Task title"
-                      autoFocus
-                    />
+                    <label className="text-sm font-medium">Icon</label>
+                    <div className="flex flex-wrap gap-1">
+                      <button
+                        type="button"
+                        title="No icon"
+                        onClick={() => setTaskIcon(null)}
+                        className={`flex size-7 items-center justify-center rounded-md border text-xs text-muted-foreground transition-colors ${taskIcon === null ? "border-foreground bg-accent" : "border-transparent hover:border-border hover:bg-accent/50"}`}
+                      >
+                        —
+                      </button>
+                      {TASK_ICONS.map(({ key, Icon }) => (
+                        <button
+                          key={key}
+                          type="button"
+                          title={key}
+                          onClick={() => setTaskIcon(taskIcon === key ? null : key)}
+                          className={`flex size-7 items-center justify-center rounded-md border transition-colors ${taskIcon === key ? "border-foreground bg-accent" : "border-transparent hover:border-border hover:bg-accent/50"}`}
+                        >
+                          <Icon className="size-3.5 text-muted-foreground" />
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </>
               )}
@@ -299,9 +343,7 @@ export function KanbanTaskModal({
               {wizardStep === 3 && (
                 <>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-sm font-medium">
-                      Acceptance criteria
-                    </label>
+                    <label className="text-sm font-medium">Acceptance criteria</label>
                     <textarea
                       className="min-h-28 w-full resize-y rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                       value={acceptanceCriteria}
@@ -312,8 +354,7 @@ export function KanbanTaskModal({
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-sm font-medium text-muted-foreground">
-                      Technical hints{" "}
-                      <span className="font-normal">(optional)</span>
+                      Technical hints <span className="font-normal">(optional)</span>
                     </label>
                     <textarea
                       className="min-h-20 w-full resize-y rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
@@ -327,16 +368,30 @@ export function KanbanTaskModal({
             </>
           ) : (
             <>
-              {/* Title */}
+              {/* Title + Tag */}
               {isEditable ? (
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium">Title</label>
-                  <input
-                    className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Task title"
-                  />
+                <div className="flex gap-3">
+                  <div className="flex flex-1 flex-col gap-1.5">
+                    <label className="text-sm font-medium">Title</label>
+                    <input
+                      className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="Task title"
+                    />
+                  </div>
+                  <div className="flex w-28 flex-col gap-1.5">
+                    <label className="text-sm font-medium text-muted-foreground">
+                      Tag <span className="font-normal">(optional)</span>
+                    </label>
+                    <input
+                      className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                      value={taskTag}
+                      onChange={(e) => setTaskTag(e.target.value)}
+                      placeholder="e.g. backend"
+                      maxLength={24}
+                    />
+                  </div>
                 </div>
               ) : null}
 
@@ -369,6 +424,59 @@ export function KanbanTaskModal({
                 </div>
               )}
 
+              {/* Color & Icon */}
+              {isEditable && (
+                <div className="flex gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-sm font-medium">Color</label>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        title="No color"
+                        onClick={() => setTaskColor(null)}
+                        className={`size-5 rounded-full border-2 bg-muted transition-all ${taskColor === null ? "border-foreground scale-110" : "border-transparent hover:border-muted-foreground/40"}`}
+                      />
+                      {TASK_COLORS.map((c) => (
+                        <button
+                          key={c.key}
+                          type="button"
+                          title={c.key}
+                          onClick={() => setTaskColor(taskColor === c.key ? null : c.key)}
+                          className={`size-5 rounded-full border-2 transition-all ${taskColor === c.key ? "border-foreground scale-110" : "border-transparent hover:border-muted-foreground/40"}`}
+                          style={{ backgroundColor: c.swatch }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+              {isEditable && (
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-medium">Icon</label>
+                  <div className="flex flex-wrap gap-1">
+                    <button
+                      type="button"
+                      title="No icon"
+                      onClick={() => setTaskIcon(null)}
+                      className={`flex size-7 items-center justify-center rounded-md border text-xs text-muted-foreground transition-colors ${taskIcon === null ? "border-foreground bg-accent" : "border-transparent hover:border-border hover:bg-accent/50"}`}
+                    >
+                      —
+                    </button>
+                    {TASK_ICONS.map(({ key, Icon }) => (
+                      <button
+                        key={key}
+                        type="button"
+                        title={key}
+                        onClick={() => setTaskIcon(taskIcon === key ? null : key)}
+                        className={`flex size-7 items-center justify-center rounded-md border transition-colors ${taskIcon === key ? "border-foreground bg-accent" : "border-transparent hover:border-border hover:bg-accent/50"}`}
+                      >
+                        <Icon className="size-3.5 text-muted-foreground" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Goal */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium">Goal</label>
@@ -388,9 +496,7 @@ export function KanbanTaskModal({
 
               {/* Acceptance criteria */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium">
-                  Acceptance criteria
-                </label>
+                <label className="text-sm font-medium">Acceptance criteria</label>
                 {isEditable ? (
                   <textarea
                     className="min-h-20 w-full resize-y rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
@@ -408,8 +514,7 @@ export function KanbanTaskModal({
               {/* Technical hints */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium text-muted-foreground">
-                  Technical hints{" "}
-                  <span className="font-normal">(optional)</span>
+                  Technical hints <span className="font-normal">(optional)</span>
                 </label>
                 {isEditable ? (
                   <textarea
@@ -525,12 +630,9 @@ export function KanbanTaskModal({
                           className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs"
                         >
                           <span className="font-medium text-destructive/80">
-                            {err.column} —{" "}
-                            {new Date(err.occurredAt).toLocaleString()}
+                            {err.column} — {new Date(err.occurredAt).toLocaleString()}
                           </span>
-                          <p className="mt-1 text-muted-foreground">
-                            {err.message}
-                          </p>
+                          <p className="mt-1 text-muted-foreground">{err.message}</p>
                         </li>
                       ))}
                     </ul>
@@ -578,9 +680,7 @@ export function KanbanTaskModal({
               {wizardStep < 3 ? (
                 <Button
                   onClick={() => setWizardStep((s) => (s + 1) as 2 | 3)}
-                  disabled={
-                    wizardStep === 1 ? !title.trim() : !taskDetail.trim()
-                  }
+                  disabled={wizardStep === 1 ? !title.trim() : !taskDetail.trim()}
                 >
                   Next
                 </Button>
@@ -608,10 +708,7 @@ export function KanbanTaskModal({
                 {isEditable ? "Cancel" : "Close"}
               </Button>
               {isEditable && (
-                <Button
-                  onClick={() => void handleSave()}
-                  disabled={saving || !title.trim()}
-                >
+                <Button onClick={() => void handleSave()} disabled={saving || !title.trim()}>
                   {saving ? "Saving…" : "Save"}
                 </Button>
               )}
