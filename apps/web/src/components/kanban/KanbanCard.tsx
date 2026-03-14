@@ -32,7 +32,10 @@ export function KanbanCard({ task }: KanbanCardProps) {
   const borderColorClass = getTaskBorderClass(task.color ?? null);
   const iconColor = getTaskSwatchColor(task.color ?? null);
 
-  const isAgentRunning = task.threadStatus === "running";
+  const isAgentRunning =
+    task.threadStatus === "running" ||
+    ((task.column === "in_progress" || task.column === "testing") &&
+      task.linkedThreadId !== null);
   const isThreadIdle = task.threadStatus === "idle" && task.linkedThreadId !== null;
   const isDraggable = task.column === "waiting" || task.column === "planning";
   const hasErrors = task.errorComments.length > 0 && task.column === "waiting";

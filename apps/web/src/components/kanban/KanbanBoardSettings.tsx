@@ -11,6 +11,7 @@ import { readNativeApi } from "~/nativeApi";
 import { useKanbanStore } from "~/kanbanStore";
 import { toastManager } from "~/components/ui/toast";
 import { Button } from "~/components/ui/button";
+import ChatMarkdown from "~/components/ChatMarkdown";
 import {
   Dialog,
   DialogPopup,
@@ -37,12 +38,26 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "testing", label: "Testing" },
 ];
 
-type FileState = { content: string; loading: boolean; saving: boolean };
+type FileState = {
+  content: string;
+  loading: boolean;
+  saving: boolean;
+  loaded: boolean;
+  exists: boolean;
+  error: string | null;
+  viewMode: "edit" | "preview";
+  dirty: boolean;
+};
 
 const INITIAL_FILE_STATE: FileState = {
   content: "",
   loading: false,
   saving: false,
+  loaded: false,
+  exists: false,
+  error: null,
+  viewMode: "preview",
+  dirty: false,
 };
 
 export function KanbanBoardSettings({
@@ -82,33 +97,48 @@ export function KanbanBoardSettings({
   async function loadProjectFiles() {
     const api = readNativeApi();
     if (!api || !workspaceRoot) return;
-    setAgentsMd((s) => ({ ...s, loading: true }));
-    setClaudeMd((s) => ({ ...s, loading: true }));
+    setAgentsMd((s) => ({ ...s, loading: true, error: null }));
+    setClaudeMd((s) => ({ ...s, loading: true, error: null }));
+
+    const readOne = async (relativePath: string) => {
+      try {
+        const result = await api.projects.readFile({ cwd: workspaceRoot, relativePath });
+        return { contents: result.contents, error: null };
+      } catch (err) {
+        return { contents: null, error: err instanceof Error ? err.message : String(err) };
+      }
+    };
+
     const [agents, claude] = await Promise.all([
-      api.projects.readFile({ cwd: workspaceRoot, relativePath: "AGENTS.md" }),
-      api.projects.readFile({ cwd: workspaceRoot, relativePath: "CLAUDE.md" }),
+      readOne("AGENTS.md"),
+      readOne("CLAUDE.md"),
     ]);
-    setAgentsMd({
+
+    setAgentsMd((s) => ({
       content: agents.contents ?? "",
       loading: false,
       saving: false,
-    });
-    setClaudeMd({
+      loaded: agents.error === null,
+      exists: agents.contents !== null,
+      error: agents.error,
+      viewMode: s.viewMode,
+      dirty: false,
+    }));
+    setClaudeMd((s) => ({
       content: claude.contents ?? "",
       loading: false,
       saving: false,
-    });
+      loaded: claude.error === null,
+      exists: claude.contents !== null,
+      error: claude.error,
+      viewMode: s.viewMode,
+      dirty: false,
+    }));
   }
 
   function handleTabChange(tab: Tab) {
     setActiveTab(tab);
-    if (
-      tab === "project_files" &&
-      !agentsMd.loading &&
-      agentsMd.content === "" &&
-      !claudeMd.loading &&
-      claudeMd.content === ""
-    ) {
+    if (tab === "project_files" && !agentsMd.loaded && !agentsMd.loading && !agentsMd.error) {
       void loadProjectFiles();
     }
   }
@@ -146,6 +176,7 @@ export function KanbanBoardSettings({
         relativePath,
         contents: content,
       });
+      setState((s) => ({ ...s, exists: true, dirty: false }));
       toastManager.add({ type: "success", title: `${relativePath} saved` });
     } finally {
       setState((s) => ({ ...s, saving: false }));
@@ -310,21 +341,39 @@ export function KanbanBoardSettings({
                       <div key={name} className="flex flex-col gap-1.5">
                         <div className="flex items-center justify-between">
                           <label className="text-sm font-medium">{name}</label>
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              disabled={state.loading || state.saving}
-                              onClick={() =>
-                                void handleSaveFile(
-                                  name,
-                                  state.content,
-                                  setState,
-                                )
-                              }
-                            >
-                              {state.saving ? "Saving…" : "Save"}
-                            </Button>
+                          <div className="flex items-center gap-2">
+                            {state.loaded && state.exists && (
+                              <div className="flex overflow-hidden rounded-md border text-xs">
+                                <button
+                                  onClick={() => setState((s) => ({ ...s, viewMode: "edit" }))}
+                                  className={`px-2 py-1 ${state.viewMode === "edit" ? "bg-muted font-medium" : "text-muted-foreground"}`}
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => setState((s) => ({ ...s, viewMode: "preview" }))}
+                                  className={`px-2 py-1 ${state.viewMode === "preview" ? "bg-muted font-medium" : "text-muted-foreground"}`}
+                                >
+                                  Preview
+                                </button>
+                              </div>
+                            )}
+                            {(!state.loaded || state.exists) && !state.error && state.dirty && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={state.loading || state.saving}
+                                onClick={() =>
+                                  void handleSaveFile(
+                                    name,
+                                    state.content,
+                                    setState,
+                                  )
+                                }
+                              >
+                                {state.saving ? "Saving…" : "Save"}
+                              </Button>
+                            )}
                             <Button
                               size="sm"
                               variant="outline"
@@ -337,19 +386,61 @@ export function KanbanBoardSettings({
                             </Button>
                           </div>
                         </div>
-                        <textarea
-                          className="mt-1 min-h-48 w-full resize-y rounded-lg border bg-background px-3 py-2 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
-                          value={state.loading ? "" : state.content}
-                          placeholder={
-                            state.loading
-                              ? "Loading…"
-                              : `${name} content (empty if file doesn't exist)`
-                          }
-                          disabled={state.loading}
-                          onChange={(e) =>
-                            setState((s) => ({ ...s, content: e.target.value }))
-                          }
-                        />
+                        {state.error !== null ? (
+                          <div className="mt-1 flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed px-4 py-10 text-center">
+                            <p className="text-sm text-muted-foreground">
+                              Failed to load {name}.
+                            </p>
+                            <p className="max-w-sm break-all font-mono text-xs text-muted-foreground">
+                              {state.error}
+                            </p>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => void loadProjectFiles()}
+                            >
+                              Retry
+                            </Button>
+                          </div>
+                        ) : state.loaded && !state.exists ? (
+                          <div className="mt-1 flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed px-4 py-10 text-center">
+                            <p className="text-sm text-muted-foreground">
+                              This file doesn&apos;t exist yet.
+                            </p>
+                            <p className="font-mono text-xs text-muted-foreground">
+                              {workspaceRoot}/{name}
+                            </p>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() =>
+                                setState((s) => ({ ...s, exists: true, dirty: true, viewMode: "edit" }))
+                              }
+                            >
+                              Create {name}
+                            </Button>
+                          </div>
+                        ) : state.viewMode === "preview" ? (
+                          <div className="mt-1 max-h-96 min-h-48 overflow-y-auto rounded-lg border bg-background px-3 py-2">
+                            <ChatMarkdown text={state.content} cwd={workspaceRoot} />
+                          </div>
+                        ) : (
+                          <textarea
+                            className="mt-1 min-h-48 w-full resize-y rounded-lg border bg-background px-3 py-2 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                            value={state.loading ? "" : state.content}
+                            placeholder={
+                              state.loading ? "Loading…" : `${name} content`
+                            }
+                            disabled={state.loading}
+                            onChange={(e) =>
+                              setState((s) => ({
+                                ...s,
+                                content: e.target.value,
+                                dirty: true,
+                              }))
+                            }
+                          />
+                        )}
                       </div>
                     ))}
                   </>

@@ -1018,9 +1018,9 @@ const make = Effect.gen(function* () {
       if (event.type === "runtime.error") {
         const runtimeErrorMessage = runtimeErrorMessageFromEvent(event) ?? "Provider runtime error";
 
-        const shouldApplyRuntimeError = !STRICT_PROVIDER_LIFECYCLE_GUARD
-          ? true
-          : activeTurnId === null || eventTurnId === undefined || sameId(activeTurnId, eventTurnId);
+        // runtime.error is a catastrophic provider failure — always apply it
+        // regardless of turn-id matching so the task never gets stuck in-progress.
+        const shouldApplyRuntimeError = true;
 
         if (shouldApplyRuntimeError) {
           yield* orchestrationEngine.dispatch({

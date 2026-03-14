@@ -776,7 +776,7 @@ export const createServer = Effect.fn(function* (): Effect.fn.Return<
         });
         const contents = yield* fileSystem
           .readFileString(target.absolutePath)
-          .pipe(Effect.catchAll(() => Effect.succeed(null)));
+          .pipe(Effect.catch(() => Effect.succeed(null)));
         return { contents };
       }
 

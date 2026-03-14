@@ -23,6 +23,7 @@ export default function SidebarKanbanButton({
               void navigate({
                 to: "/kanban/$projectId",
                 params: { projectId },
+                search: { search: "", tag: "", color: "" },
               });
             }}
           >
