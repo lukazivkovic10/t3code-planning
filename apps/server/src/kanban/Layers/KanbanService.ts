@@ -2,6 +2,7 @@ import {
   CommandId,
   IsoDateTime,
   KANBAN_DEFAULT_IN_PROGRESS_PROMPT,
+  KANBAN_DEFAULT_PLANNING_PROMPT,
   KANBAN_DEFAULT_TESTING_PROMPT,
   KanbanBoardConfig,
   KanbanTask,
@@ -34,6 +35,7 @@ function taskRowToTask(row: KanbanTaskRow): KanbanTask {
     linkedThreadId: row.linkedThreadId,
     agentFindings: row.agentFindings,
     errorComments: row.errorComments,
+    todos: row.todos,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -44,6 +46,8 @@ function configRowToConfig(row: KanbanBoardConfigRow): KanbanBoardConfig {
     projectId: row.projectId,
     inProgressPrompt: row.inProgressPrompt,
     testingPrompt: row.testingPrompt,
+    planningPrompt: row.planningPrompt,
+    requirePlanningApproval: row.requirePlanningApproval,
     updatedAt: row.updatedAt,
   };
 }
@@ -63,6 +67,8 @@ const makeKanbanService = Effect.gen(function* () {
         projectId: input.projectId,
         inProgressPrompt: KANBAN_DEFAULT_IN_PROGRESS_PROMPT,
         testingPrompt: KANBAN_DEFAULT_TESTING_PROMPT,
+        planningPrompt: KANBAN_DEFAULT_PLANNING_PROMPT,
+        requirePlanningApproval: false,
         updatedAt: now,
       } satisfies KanbanBoardConfig;
     }).pipe(Effect.orDie);
@@ -75,6 +81,8 @@ const makeKanbanService = Effect.gen(function* () {
         projectId: input.projectId,
         inProgressPrompt: input.inProgressPrompt ?? existing.inProgressPrompt,
         testingPrompt: input.testingPrompt ?? existing.testingPrompt,
+        planningPrompt: input.planningPrompt ?? existing.planningPrompt,
+        requirePlanningApproval: input.requirePlanningApproval ?? existing.requirePlanningApproval,
         updatedAt: now,
       };
       yield* repository.upsertConfig(updated);
@@ -102,6 +110,7 @@ const makeKanbanService = Effect.gen(function* () {
         linkedThreadId: null,
         agentFindings: null,
         errorComments: [],
+        todos: [],
         createdAt: now,
         updatedAt: now,
       };
@@ -138,6 +147,53 @@ const makeKanbanService = Effect.gen(function* () {
 
       let linkedThreadId = existing.linkedThreadId;
 
+      if (input.column === "planning") {
+        const readModel = yield* orchestrationEngine.getReadModel();
+        const project = readModel.projects.find(
+          (p: OrchestrationProject) => p.id === existing.projectId,
+        );
+        const model = project?.defaultModel ?? "codex";
+
+        const configOption = yield* repository.getConfig({ projectId: existing.projectId });
+        const planningPrompt = Option.isSome(configOption)
+          ? configOption.value.planningPrompt
+          : KANBAN_DEFAULT_PLANNING_PROMPT;
+
+        const newThreadId = ThreadId.makeUnsafe(crypto.randomUUID());
+        const threadCreatedAt = new Date().toISOString();
+
+        yield* orchestrationEngine.dispatch({
+          type: "thread.create",
+          commandId: serverCommandId("kanban-planning-thread-create"),
+          threadId: newThreadId,
+          projectId: existing.projectId,
+          title: `Planning: ${existing.title}`,
+          model,
+          interactionMode: "default",
+          runtimeMode: "full-access",
+          branch: null,
+          worktreePath: null,
+          createdAt: threadCreatedAt,
+        });
+
+        yield* orchestrationEngine.dispatch({
+          type: "thread.turn.start",
+          commandId: serverCommandId("kanban-planning-turn-start"),
+          threadId: newThreadId,
+          interactionMode: "default",
+          message: {
+            messageId: MessageId.makeUnsafe(crypto.randomUUID()),
+            role: "user",
+            text: `${planningPrompt}\n\nTask: ${existing.title}\n\n${existing.description}`,
+            attachments: [],
+          },
+          runtimeMode: "full-access",
+          createdAt: new Date().toISOString(),
+        });
+
+        linkedThreadId = newThreadId;
+      }
+
       if (input.column === "in_progress") {
         const readModel = yield* orchestrationEngine.getReadModel();
         const project = readModel.projects.find(
@@ -146,9 +202,23 @@ const makeKanbanService = Effect.gen(function* () {
         const model = project?.defaultModel ?? "codex";
 
         const configOption = yield* repository.getConfig({ projectId: existing.projectId });
-        const inProgressPrompt = Option.isSome(configOption)
-          ? configOption.value.inProgressPrompt
-          : KANBAN_DEFAULT_IN_PROGRESS_PROMPT;
+        const config = Option.isSome(configOption) ? configOption.value : null;
+        const inProgressPrompt = config?.inProgressPrompt ?? KANBAN_DEFAULT_IN_PROGRESS_PROMPT;
+        const requirePlanningApproval = config?.requirePlanningApproval ?? false;
+
+        // Build scope-of-work section from todos if planning approval is on
+        let todosContext = "";
+        if (requirePlanningApproval && existing.todos.length > 0) {
+          const acceptedTodos = existing.todos.filter((t) => t.accepted);
+          if (acceptedTodos.length > 0) {
+            todosContext =
+              "\n\nScope of work (accepted planning steps):\n" +
+              acceptedTodos.map((t) => `- ${t.text}`).join("\n");
+          }
+        } else if (!requirePlanningApproval && existing.todos.length > 0) {
+          todosContext =
+            "\n\nPlanning steps:\n" + existing.todos.map((t) => `- ${t.text}`).join("\n");
+        }
 
         const newThreadId = ThreadId.makeUnsafe(crypto.randomUUID());
         const threadCreatedAt = new Date().toISOString();
@@ -175,7 +245,7 @@ const makeKanbanService = Effect.gen(function* () {
           message: {
             messageId: MessageId.makeUnsafe(crypto.randomUUID()),
             role: "user",
-            text: `${inProgressPrompt}\n\nTask: ${existing.title}\n\n${existing.description}`,
+            text: `${inProgressPrompt}\n\nTask: ${existing.title}\n\n${existing.description}${todosContext}`,
             attachments: [],
           },
           runtimeMode: "full-access",
@@ -239,6 +309,23 @@ const makeKanbanService = Effect.gen(function* () {
       return { taskId: input.taskId, projectId };
     }).pipe(Effect.orDie);
 
+  const updateTaskTodos: KanbanServiceShape["updateTaskTodos"] = (input) =>
+    Effect.gen(function* () {
+      const taskOption = yield* repository.getTask({ taskId: input.taskId });
+      if (Option.isNone(taskOption)) {
+        return yield* Effect.die(new Error(`KanbanTask not found: ${input.taskId}`));
+      }
+      const existing = taskOption.value;
+      const now = new Date().toISOString() as IsoDateTime;
+      const updated: KanbanTaskRow = {
+        ...existing,
+        todos: input.todos,
+        updatedAt: now,
+      };
+      yield* repository.upsertTask(updated);
+      return taskRowToTask(updated);
+    }).pipe(Effect.orDie);
+
   return {
     getBoardConfig,
     updateBoardConfig,
@@ -248,6 +335,7 @@ const makeKanbanService = Effect.gen(function* () {
     moveTask,
     stopTask,
     deleteTask,
+    updateTaskTodos,
   } satisfies KanbanServiceShape;
 });
 

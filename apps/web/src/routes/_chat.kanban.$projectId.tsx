@@ -5,6 +5,7 @@ import { ProjectId } from "@t3tools/contracts";
 import { readNativeApi } from "../nativeApi";
 import { useKanbanStore } from "../kanbanStore";
 import { KanbanBoard } from "../components/kanban/KanbanBoard";
+import { SidebarInset } from "~/components/ui/sidebar";
 
 function KanbanRoute() {
   const { projectId } = Route.useParams();
@@ -28,7 +29,11 @@ function KanbanRoute() {
     return api.kanban.onDomainEvent(handleDomainEvent);
   }, [projectId, setTasks, setConfig, handleDomainEvent]);
 
-  return <KanbanBoard projectId={projectId} />;
+  return (
+    <SidebarInset className="h-dvh min-h-0 overflow-hidden bg-background text-foreground">
+      <KanbanBoard projectId={projectId} />
+    </SidebarInset>
+  );
 }
 
 export const Route = createFileRoute("/_chat/kanban/$projectId")({

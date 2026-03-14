@@ -767,6 +767,19 @@ export const createServer = Effect.fn(function* (): Effect.fn.Return<
         });
       }
 
+      case WS_METHODS.projectsReadFile: {
+        const body = stripRequestTag(request.body);
+        const target = yield* resolveWorkspaceWritePath({
+          workspaceRoot: body.cwd,
+          relativePath: body.relativePath,
+          path,
+        });
+        const contents = yield* fileSystem
+          .readFileString(target.absolutePath)
+          .pipe(Effect.catchAll(() => Effect.succeed(null)));
+        return { contents };
+      }
+
       case WS_METHODS.projectsWriteFile: {
         const body = stripRequestTag(request.body);
         const target = yield* resolveWorkspaceWritePath({
@@ -964,6 +977,15 @@ export const createServer = Effect.fn(function* (): Effect.fn.Return<
           .publishAll(KANBAN_WS_CHANNELS.domainEvent, { type: "task.deleted", taskId, projectId })
           .pipe(Effect.ignore);
         return null;
+      }
+
+      case KANBAN_WS_METHODS.updateTaskTodos: {
+        const body = stripRequestTag(request.body);
+        const task = yield* kanbanService.updateTaskTodos(body);
+        yield* pushBus
+          .publishAll(KANBAN_WS_CHANNELS.domainEvent, { type: "task.todos-updated", task })
+          .pipe(Effect.ignore);
+        return task;
       }
 
       default: {

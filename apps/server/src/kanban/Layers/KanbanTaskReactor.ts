@@ -4,6 +4,7 @@ import {
   MessageId,
   ThreadId,
   type KanbanTaskError,
+  type KanbanTodo,
   type OrchestrationEvent,
 } from "@t3tools/contracts";
 import { Cause, Effect, Layer, Option, Stream } from "effect";
@@ -85,6 +86,7 @@ const make = Effect.gen(function* () {
             linkedThreadId: updated.linkedThreadId,
             agentFindings: updated.agentFindings,
             errorComments: updated.errorComments,
+            todos: updated.todos,
             createdAt: updated.createdAt,
             updatedAt: updated.updatedAt,
           },
@@ -102,6 +104,62 @@ const make = Effect.gen(function* () {
       return;
     }
     if (thread.latestTurn?.state !== "completed") {
+      return;
+    }
+
+    // ── Completed while planning: parse plan into todos ───────────────────
+
+    if (task.column === "planning") {
+      const lastAssistantMessage = thread.messages.toReversed().find((m) => m.role === "assistant");
+      const planText = lastAssistantMessage?.text ?? "";
+
+      // Parse bullet/numbered list items into todos
+      const todoLines: string[] = [];
+      for (const line of planText.split("\n")) {
+        const bulletMatch = /^[\-\*]\s+(.+)$/.exec(line.trim());
+        if (bulletMatch?.[1]) {
+          todoLines.push(bulletMatch[1].trim());
+          continue;
+        }
+        const numberedMatch = /^\d+\.\s+(.+)$/.exec(line.trim());
+        if (numberedMatch?.[1]) {
+          todoLines.push(numberedMatch[1].trim());
+        }
+      }
+
+      const todos: KanbanTodo[] = todoLines.map((text) => ({
+        id: crypto.randomUUID(),
+        text,
+        accepted: false,
+        createdAt: now,
+      }));
+
+      const updated: KanbanTaskRow = {
+        ...task,
+        todos,
+        linkedThreadId: null,
+        updatedAt: now,
+      };
+      yield* repository.upsertTask(updated);
+      yield* pushBus
+        .publishAll(KANBAN_WS_CHANNELS.domainEvent, {
+          type: "task.todos-updated",
+          task: {
+            id: updated.id,
+            projectId: updated.projectId,
+            title: updated.title,
+            description: updated.description,
+            column: updated.column,
+            sortOrder: updated.sortOrder,
+            linkedThreadId: updated.linkedThreadId,
+            agentFindings: updated.agentFindings,
+            errorComments: updated.errorComments,
+            todos: updated.todos,
+            createdAt: updated.createdAt,
+            updatedAt: updated.updatedAt,
+          },
+        })
+        .pipe(Effect.ignore);
       return;
     }
 
@@ -171,6 +229,7 @@ const make = Effect.gen(function* () {
             linkedThreadId: updated.linkedThreadId,
             agentFindings: updated.agentFindings,
             errorComments: updated.errorComments,
+            todos: updated.todos,
             createdAt: updated.createdAt,
             updatedAt: updated.updatedAt,
           },
@@ -207,6 +266,7 @@ const make = Effect.gen(function* () {
             linkedThreadId: updated.linkedThreadId,
             agentFindings: updated.agentFindings,
             errorComments: updated.errorComments,
+            todos: updated.todos,
             createdAt: updated.createdAt,
             updatedAt: updated.updatedAt,
           },

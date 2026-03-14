@@ -18,6 +18,7 @@ import type {
   KanbanTaskId,
   KanbanUpdateBoardConfigInput,
   KanbanUpdateTaskInput,
+  KanbanUpdateTaskTodosInput,
   ProjectId,
 } from "@t3tools/contracts";
 import { ServiceMap } from "effect";
@@ -39,6 +40,7 @@ export interface KanbanServiceShape {
   readonly deleteTask: (
     input: KanbanDeleteTaskInput,
   ) => Effect.Effect<{ taskId: KanbanTaskId; projectId: ProjectId }>;
+  readonly updateTaskTodos: (input: KanbanUpdateTaskTodosInput) => Effect.Effect<KanbanTask>;
 }
 
 /**

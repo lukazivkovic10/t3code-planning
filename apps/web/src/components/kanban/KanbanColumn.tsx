@@ -9,7 +9,8 @@ import { KanbanCard } from "./KanbanCard";
 import { KanbanTaskModal } from "./KanbanTaskModal";
 
 const COLUMN_LABELS: Record<KanbanColumnId, string> = {
-  waiting: "Waiting",
+  waiting: "New",
+  planning: "Planning",
   in_progress: "In Progress",
   testing: "Testing",
   complete: "Complete",
@@ -29,7 +30,7 @@ export function KanbanColumn({ column, tasks, projectId }: KanbanColumnProps) {
 
   return (
     <>
-      <div className="flex w-72 shrink-0 flex-col gap-2">
+      <div className="flex min-w-[12rem] flex-1 flex-col gap-2 self-stretch">
         {/* Header */}
         <div className="flex items-center gap-2 px-1">
           <h3 className="text-sm font-semibold">{COLUMN_LABELS[column]}</h3>
@@ -42,16 +43,23 @@ export function KanbanColumn({ column, tasks, projectId }: KanbanColumnProps) {
         <div
           ref={setNodeRef}
           className={cn(
-            "flex min-h-24 flex-col gap-2 rounded-2xl border-2 border-dashed p-2 transition-colors",
+            "flex min-h-24 flex-1 flex-col gap-2 overflow-y-auto rounded-2xl border-2 border-dashed p-2 transition-colors",
             isOver ? "border-primary/50 bg-primary/5" : "border-transparent bg-muted/30",
+            isWaiting && "cursor-pointer",
           )}
+          onClick={isWaiting ? (e) => { if (e.target === e.currentTarget) setCreateOpen(true); } : undefined}
         >
           {tasks.map((task) => (
             <KanbanCard key={task.id} task={task} />
           ))}
 
           {tasks.length === 0 && (
-            <p className="py-4 text-center text-xs text-muted-foreground/50">No tasks</p>
+            <p
+              className="py-4 text-center text-xs text-muted-foreground/50"
+              onClick={isWaiting ? () => setCreateOpen(true) : undefined}
+            >
+              {isWaiting ? "Click to add a task" : "No tasks"}
+            </p>
           )}
         </div>
 

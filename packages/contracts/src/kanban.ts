@@ -11,8 +11,18 @@ export type KanbanTaskId = typeof KanbanTaskId.Type;
 
 // ── Column ─────────────────────────────────────────────────────────────────
 
-export const KanbanColumnId = Schema.Literals(["waiting", "in_progress", "testing", "complete"]);
+export const KanbanColumnId = Schema.Literals(["waiting", "planning", "in_progress", "testing", "complete"]);
 export type KanbanColumnId = typeof KanbanColumnId.Type;
+
+// ── Todo (planning step) ───────────────────────────────────────────────────
+
+export const KanbanTodo = Schema.Struct({
+  id: Schema.String,
+  text: Schema.String,
+  accepted: Schema.Boolean,
+  createdAt: IsoDateTime,
+});
+export type KanbanTodo = typeof KanbanTodo.Type;
 
 // ── Task error (appended on agent failure) ─────────────────────────────────
 
@@ -29,6 +39,8 @@ export const KanbanBoardConfig = Schema.Struct({
   projectId: ProjectId,
   inProgressPrompt: Schema.String,
   testingPrompt: Schema.String,
+  planningPrompt: Schema.String,
+  requirePlanningApproval: Schema.Boolean,
   updatedAt: IsoDateTime,
 });
 export type KanbanBoardConfig = typeof KanbanBoardConfig.Type;
@@ -45,6 +57,7 @@ export const KanbanTask = Schema.Struct({
   linkedThreadId: Schema.NullOr(ThreadId),
   agentFindings: Schema.NullOr(Schema.String),
   errorComments: Schema.Array(KanbanTaskError),
+  todos: Schema.Array(KanbanTodo),
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,
 });
@@ -61,6 +74,7 @@ export const KANBAN_WS_METHODS = {
   moveTask: "kanban.task.move",
   stopTask: "kanban.task.stop",
   deleteTask: "kanban.task.delete",
+  updateTaskTodos: "kanban.task.updateTodos",
 } as const;
 
 export const KANBAN_WS_CHANNELS = {
@@ -78,6 +92,8 @@ export const KanbanUpdateBoardConfigInput = Schema.Struct({
   projectId: ProjectId,
   inProgressPrompt: Schema.optional(Schema.String),
   testingPrompt: Schema.optional(Schema.String),
+  planningPrompt: Schema.optional(Schema.String),
+  requirePlanningApproval: Schema.optional(Schema.Boolean),
 });
 export type KanbanUpdateBoardConfigInput = typeof KanbanUpdateBoardConfigInput.Type;
 
@@ -117,12 +133,19 @@ export const KanbanDeleteTaskInput = Schema.Struct({
 });
 export type KanbanDeleteTaskInput = typeof KanbanDeleteTaskInput.Type;
 
+export const KanbanUpdateTaskTodosInput = Schema.Struct({
+  taskId: KanbanTaskId,
+  todos: Schema.Array(KanbanTodo),
+});
+export type KanbanUpdateTaskTodosInput = typeof KanbanUpdateTaskTodosInput.Type;
+
 // ── Push event ─────────────────────────────────────────────────────────────
 
 export const KanbanDomainEvent = Schema.Union([
   Schema.Struct({ type: Schema.Literal("task.created"), task: KanbanTask }),
   Schema.Struct({ type: Schema.Literal("task.updated"), task: KanbanTask }),
   Schema.Struct({ type: Schema.Literal("task.moved"), task: KanbanTask }),
+  Schema.Struct({ type: Schema.Literal("task.todos-updated"), task: KanbanTask }),
   Schema.Struct({
     type: Schema.Literal("task.deleted"),
     taskId: KanbanTaskId,
@@ -134,6 +157,11 @@ export const KanbanDomainEvent = Schema.Union([
 export type KanbanDomainEvent = typeof KanbanDomainEvent.Type;
 
 // ── Default prompts ────────────────────────────────────────────────────────
+
+export const KANBAN_DEFAULT_PLANNING_PROMPT = `You are a senior software architect.
+You have been given a development task. Break it down into a clear, actionable list of implementation steps.
+Output ONLY a markdown list of steps (bullet points starting with "- "), one step per line.
+Keep each step concise and concrete. Do not add headings or extra commentary.`;
 
 export const KANBAN_DEFAULT_IN_PROGRESS_PROMPT = `You are an expert software engineer. You have been assigned a development task.
 Read the task title and description carefully, then implement the feature completely.

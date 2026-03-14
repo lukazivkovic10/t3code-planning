@@ -117,6 +117,7 @@ export function createWsNativeApi(): NativeApi {
     projects: {
       searchEntries: (input) => transport.request(WS_METHODS.projectsSearchEntries, input),
       writeFile: (input) => transport.request(WS_METHODS.projectsWriteFile, input),
+      readFile: (input) => transport.request(WS_METHODS.projectsReadFile, input),
     },
     shell: {
       openInEditor: (cwd, editor) =>
@@ -189,6 +190,7 @@ export function createWsNativeApi(): NativeApi {
       moveTask: (input) => transport.request(KANBAN_WS_METHODS.moveTask, input) as never,
       stopTask: (input) => transport.request(KANBAN_WS_METHODS.stopTask, input) as never,
       deleteTask: (input) => transport.request(KANBAN_WS_METHODS.deleteTask, input) as never,
+      updateTaskTodos: (input) => transport.request(KANBAN_WS_METHODS.updateTaskTodos, input) as never,
       onDomainEvent: (callback) =>
         transport.subscribe(KANBAN_WS_CHANNELS.domainEvent, (message) =>
           callback(message.data as KanbanDomainEvent),

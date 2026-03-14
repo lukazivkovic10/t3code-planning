@@ -46,6 +46,7 @@ export const useKanbanStore = create<KanbanStore>((set) => ({
         case "task.created":
         case "task.updated":
         case "task.moved":
+        case "task.todos-updated":
         case "task.error": {
           const { task } = event;
           const existing = state.tasksByProject[task.projectId] ?? [];

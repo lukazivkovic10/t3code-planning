@@ -3,6 +3,7 @@ import {
   KanbanColumnId,
   KanbanTaskError,
   KanbanTaskId,
+  KanbanTodo,
   ProjectId,
   ThreadId,
   TrimmedNonEmptyString,
@@ -22,6 +23,7 @@ export const KanbanTaskRow = Schema.Struct({
   linkedThreadId: Schema.NullOr(ThreadId),
   agentFindings: Schema.NullOr(Schema.String),
   errorComments: Schema.Array(KanbanTaskError),
+  todos: Schema.Array(KanbanTodo),
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,
 });
@@ -31,6 +33,8 @@ export const KanbanBoardConfigRow = Schema.Struct({
   projectId: ProjectId,
   inProgressPrompt: Schema.String,
   testingPrompt: Schema.String,
+  planningPrompt: Schema.String,
+  requirePlanningApproval: Schema.Boolean,
   updatedAt: IsoDateTime,
 });
 export type KanbanBoardConfigRow = typeof KanbanBoardConfigRow.Type;

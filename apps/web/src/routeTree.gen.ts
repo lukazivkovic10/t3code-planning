@@ -65,7 +65,13 @@ export interface FileRouteTypes {
   fullPaths: '/' | '/$threadId' | '/settings' | '/kanban/$projectId'
   fileRoutesByTo: FileRoutesByTo
   to: '/$threadId' | '/settings' | '/' | '/kanban/$projectId'
-  id: '__root__' | '/_chat' | '/_chat/$threadId' | '/_chat/settings' | '/_chat/' | '/_chat/kanban/$projectId'
+  id:
+    | '__root__'
+    | '/_chat'
+    | '/_chat/$threadId'
+    | '/_chat/settings'
+    | '/_chat/'
+    | '/_chat/kanban/$projectId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
