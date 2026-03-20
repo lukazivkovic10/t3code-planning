@@ -217,18 +217,41 @@ const makeKanbanService = Effect.gen(function* () {
         const inProgressPrompt = config?.inProgressPrompt ?? KANBAN_DEFAULT_IN_PROGRESS_PROMPT;
         const requirePlanningApproval = config?.requirePlanningApproval ?? false;
 
-        // Build scope-of-work section from todos if planning approval is on
-        let todosContext = "";
-        if (requirePlanningApproval && existing.todos.length > 0) {
-          const acceptedTodos = existing.todos.filter((t) => t.accepted);
-          if (acceptedTodos.length > 0) {
-            todosContext =
-              "\n\nScope of work (accepted planning steps):\n" +
-              acceptedTodos.map((t) => `- ${t.text}`).join("\n");
+        // Build plan context: prefer the full planning agent response when available,
+        // falling back to the parsed todos list.
+        let planContext = "";
+        if (existing.column === "planning" && existing.linkedThreadId !== null) {
+          // The task is moving straight from planning — grab the full planning output.
+          const planningThread = readModel.threads.find((t) => t.id === existing.linkedThreadId);
+          const lastAssistantMsg = planningThread?.messages
+            .toReversed()
+            .find((m) => m.role === "assistant");
+          if (lastAssistantMsg?.text) {
+            if (requirePlanningApproval && existing.todos.length > 0) {
+              // Also append which steps were explicitly accepted by the user.
+              const acceptedTodos = existing.todos.filter((t) => t.accepted);
+              const acceptedSection =
+                acceptedTodos.length > 0
+                  ? "\n\nAccepted steps:\n" + acceptedTodos.map((t) => `- ${t.text}`).join("\n")
+                  : "";
+              planContext = "\n\nPlanning output:\n" + lastAssistantMsg.text + acceptedSection;
+            } else {
+              planContext = "\n\nPlanning output:\n" + lastAssistantMsg.text;
+            }
           }
-        } else if (!requirePlanningApproval && existing.todos.length > 0) {
-          todosContext =
-            "\n\nPlanning steps:\n" + existing.todos.map((t) => `- ${t.text}`).join("\n");
+        } else if (existing.todos.length > 0) {
+          // Fallback: no live planning thread — use the stored todos.
+          if (requirePlanningApproval) {
+            const acceptedTodos = existing.todos.filter((t) => t.accepted);
+            if (acceptedTodos.length > 0) {
+              planContext =
+                "\n\nScope of work (accepted planning steps):\n" +
+                acceptedTodos.map((t) => `- ${t.text}`).join("\n");
+            }
+          } else {
+            planContext =
+              "\n\nPlanning steps:\n" + existing.todos.map((t) => `- ${t.text}`).join("\n");
+          }
         }
 
         const newThreadId = ThreadId.makeUnsafe(crypto.randomUUID());
@@ -256,7 +279,7 @@ const makeKanbanService = Effect.gen(function* () {
           message: {
             messageId: MessageId.makeUnsafe(crypto.randomUUID()),
             role: "user",
-            text: `${inProgressPrompt}\n\nTask: ${existing.title}\n\n${existing.description}${todosContext}`,
+            text: `${inProgressPrompt}\n\nTask: ${existing.title}\n\n${existing.description}${planContext}`,
             attachments: [],
           },
           runtimeMode: "full-access",
