@@ -40,6 +40,7 @@ function taskRowToTask(row: KanbanTaskRow): KanbanTask {
     icon: row.icon,
     tag: row.tag,
     threadStatus: row.threadStatus,
+    branch: row.branch,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -119,6 +120,7 @@ const makeKanbanService = Effect.gen(function* () {
         icon: input.icon ?? null,
         tag: input.tag ?? null,
         threadStatus: null,
+        branch: input.branch ?? null,
         createdAt: now,
         updatedAt: now,
       };
@@ -141,6 +143,7 @@ const makeKanbanService = Effect.gen(function* () {
         color: input.color !== undefined ? input.color : existing.color,
         icon: input.icon !== undefined ? input.icon : existing.icon,
         tag: input.tag !== undefined ? input.tag : existing.tag,
+        branch: input.branch !== undefined ? input.branch : existing.branch,
         updatedAt: now,
       };
       yield* repository.upsertTask(updated);
@@ -180,9 +183,9 @@ const makeKanbanService = Effect.gen(function* () {
           projectId: existing.projectId,
           title: `Planning: ${existing.title}`,
           model,
-          interactionMode: "default",
+          interactionMode: "plan",
           runtimeMode: "full-access",
-          branch: null,
+          branch: existing.branch,
           worktreePath: null,
           createdAt: threadCreatedAt,
         });
@@ -191,7 +194,7 @@ const makeKanbanService = Effect.gen(function* () {
           type: "thread.turn.start",
           commandId: serverCommandId("kanban-planning-turn-start"),
           threadId: newThreadId,
-          interactionMode: "default",
+          interactionMode: "plan",
           message: {
             messageId: MessageId.makeUnsafe(crypto.randomUUID()),
             role: "user",
@@ -266,7 +269,7 @@ const makeKanbanService = Effect.gen(function* () {
           model,
           interactionMode: "default",
           runtimeMode: "full-access",
-          branch: null,
+          branch: existing.branch,
           worktreePath: null,
           createdAt: threadCreatedAt,
         });

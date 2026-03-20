@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { AlertCircleIcon, ChevronDownIcon, Loader2Icon, PlusIcon } from "lucide-react";
+import { AlertCircleIcon, ChevronDownIcon, GitBranchIcon, Loader2Icon, PlusIcon } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { IsoDateTime, ProjectId, type KanbanTask, type KanbanTodo } from "@t3tools/contracts";
+import { gitBranchesQueryOptions } from "~/lib/gitReactQuery";
 
 import { readNativeApi } from "~/nativeApi";
 import { useKanbanStore } from "~/kanbanStore";
@@ -30,9 +32,11 @@ interface KanbanTaskModalProps {
   task?: KanbanTask;
   /** Required for create mode */
   projectId?: string;
+  /** Project workspace root — used to list available git branches */
+  workspaceRoot?: string;
 }
 
-export function KanbanTaskModal({ open, onOpenChange, task, projectId }: KanbanTaskModalProps) {
+export function KanbanTaskModal({ open, onOpenChange, task, projectId, workspaceRoot }: KanbanTaskModalProps) {
   const parsed = task
     ? parseDescription(task.description ?? "")
     : { type: "feature" as TaskType, detail: "", acceptance: "", hints: "" };
@@ -52,9 +56,14 @@ export function KanbanTaskModal({ open, onOpenChange, task, projectId }: KanbanT
 
   const handleDomainEvent = useKanbanStore((s) => s.handleDomainEvent);
 
+  const [taskBranch, setTaskBranch] = useState<string | null>(task?.branch ?? null);
+
   const [todos, setTodos] = useState<KanbanTodo[]>(() => [...(task?.todos ?? [])]);
   const [newTodoText, setNewTodoText] = useState("");
   const [savingTodos, setSavingTodos] = useState(false);
+
+  const branchesQuery = useQuery(gitBranchesQueryOptions(workspaceRoot ?? null));
+  const availableBranches = branchesQuery.data?.branches ?? [];
 
   const isCreate = !task;
   const isEditable = !task || task.column === "waiting";
@@ -89,6 +98,7 @@ export function KanbanTaskModal({ open, onOpenChange, task, projectId }: KanbanT
     setTaskColor(task?.color ?? null);
     setTaskIcon(task?.icon ?? null);
     setTaskTag(task?.tag ?? "");
+    setTaskBranch(task?.branch ?? null);
   }
 
   async function handleTodoToggle(todoId: string) {
@@ -153,6 +163,7 @@ export function KanbanTaskModal({ open, onOpenChange, task, projectId }: KanbanT
           color: taskColor,
           icon: taskIcon,
           tag: taskTag.trim() || null,
+          branch: taskBranch,
         });
         handleDomainEvent({ type: "task.created", task: created });
       } else {
@@ -163,6 +174,7 @@ export function KanbanTaskModal({ open, onOpenChange, task, projectId }: KanbanT
           color: taskColor,
           icon: taskIcon,
           tag: taskTag.trim() || null,
+          branch: taskBranch,
         });
         handleDomainEvent({ type: "task.updated", task: updated });
       }
@@ -276,6 +288,23 @@ export function KanbanTaskModal({ open, onOpenChange, task, projectId }: KanbanT
                         maxLength={24}
                       />
                     </div>
+                    {workspaceRoot && (
+                      <div className="flex w-40 flex-col gap-1.5">
+                        <label className="text-sm font-medium text-muted-foreground">
+                          Branch <span className="font-normal">(optional)</span>
+                        </label>
+                        <select
+                          className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                          value={taskBranch ?? ""}
+                          onChange={(e) => setTaskBranch(e.target.value || null)}
+                        >
+                          <option value="">Default</option>
+                          {availableBranches.map((b) => (
+                            <option key={b.name} value={b.name}>{b.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
                   </div>
                   <div className="flex gap-6">
                     <div className="flex flex-col gap-1.5">
@@ -392,8 +421,32 @@ export function KanbanTaskModal({ open, onOpenChange, task, projectId }: KanbanT
                       maxLength={24}
                     />
                   </div>
+                  {workspaceRoot && (
+                    <div className="flex w-36 flex-col gap-1.5">
+                      <label className="text-sm font-medium text-muted-foreground">
+                        Branch <span className="font-normal">(optional)</span>
+                      </label>
+                      <select
+                        className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                        value={taskBranch ?? ""}
+                        onChange={(e) => setTaskBranch(e.target.value || null)}
+                      >
+                        <option value="">Default</option>
+                        {availableBranches.map((b) => (
+                          <option key={b.name} value={b.name}>{b.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                 </div>
-              ) : null}
+              ) : (
+                task?.branch && (
+                  <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <GitBranchIcon className="size-3.5" />
+                    {task.branch}
+                  </p>
+                )
+              )}
 
               {/* Task type */}
               {isEditable && (

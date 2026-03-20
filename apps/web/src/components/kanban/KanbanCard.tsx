@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { AlertCircleIcon, Loader2Icon, MessageCircleIcon, SquareIcon } from "lucide-react";
+import { AlertCircleIcon, GitBranchIcon, Loader2Icon, MessageCircleIcon, SquareIcon } from "lucide-react";
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import type { KanbanTask } from "@t3tools/contracts";
@@ -7,6 +7,7 @@ import type { KanbanTask } from "@t3tools/contracts";
 import { cn } from "~/lib/utils";
 import { readNativeApi } from "~/nativeApi";
 import { useKanbanStore } from "~/kanbanStore";
+import { useStore } from "~/store";
 import { Button } from "~/components/ui/button";
 import { KanbanTaskModal } from "./KanbanTaskModal";
 import {
@@ -24,6 +25,7 @@ interface KanbanCardProps {
 export function KanbanCard({ task }: KanbanCardProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const handleDomainEvent = useKanbanStore((s) => s.handleDomainEvent);
+  const workspaceRoot = useStore((s) => s.projects.find((p) => p.id === task.projectId)?.cwd);
 
   const parsed = parseDescription(task.description ?? "");
   const typeConfig = TASK_TYPE_CONFIG[parsed.type];
@@ -159,7 +161,7 @@ export function KanbanCard({ task }: KanbanCardProps) {
           </p>
         )}
 
-        {/* Stop button */}
+        {/* Footer: stop button + branch badge */}
         <div className="mt-0.5 flex items-center justify-between">
           {isAgentRunning && (
             <Button
@@ -172,6 +174,12 @@ export function KanbanCard({ task }: KanbanCardProps) {
               Stop
             </Button>
           )}
+          {task.branch && (
+            <span className="ml-auto flex items-center gap-1 text-xs text-muted-foreground/70">
+              <GitBranchIcon className="size-3" />
+              {task.branch}
+            </span>
+          )}
         </div>
       </div>
 
@@ -179,6 +187,7 @@ export function KanbanCard({ task }: KanbanCardProps) {
         open={modalOpen}
         onOpenChange={setModalOpen}
         task={task}
+        workspaceRoot={workspaceRoot}
       />
     </>
   );

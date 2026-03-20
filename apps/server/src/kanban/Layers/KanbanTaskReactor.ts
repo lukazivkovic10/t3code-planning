@@ -233,7 +233,7 @@ const make = Effect.gen(function* () {
         model,
         interactionMode: "default",
         runtimeMode: "full-access",
-        branch: null,
+        branch: task.branch,
         worktreePath: null,
         createdAt: newThreadCreatedAt,
       });

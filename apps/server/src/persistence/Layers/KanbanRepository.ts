@@ -43,6 +43,7 @@ const KanbanTaskRawRow = Schema.Struct({
   icon: Schema.NullOr(Schema.String),
   tag: Schema.NullOr(Schema.String),
   threadStatus: Schema.NullOr(KanbanThreadStatus),
+  branch: Schema.NullOr(Schema.String),
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,
 });
@@ -79,6 +80,7 @@ function rawToKanbanTaskRow(raw: KanbanTaskRawRow): KanbanTaskRow {
     icon: raw.icon,
     tag: raw.tag,
     threadStatus: raw.threadStatus,
+    branch: raw.branch,
     createdAt: raw.createdAt,
     updatedAt: raw.updatedAt,
   };
@@ -108,6 +110,7 @@ const makeKanbanRepository = Effect.gen(function* () {
         icon,
         tag,
         thread_status AS "threadStatus",
+        branch,
         created_at AS "createdAt",
         updated_at AS "updatedAt"
       FROM kanban_tasks
@@ -186,6 +189,7 @@ const makeKanbanRepository = Effect.gen(function* () {
         icon,
         tag,
         thread_status,
+        branch,
         created_at,
         updated_at
       )
@@ -204,6 +208,7 @@ const makeKanbanRepository = Effect.gen(function* () {
         ${row.icon},
         ${row.tag},
         ${row.threadStatus},
+        ${row.branch},
         ${row.createdAt},
         ${row.updatedAt}
       )
@@ -221,6 +226,7 @@ const makeKanbanRepository = Effect.gen(function* () {
         icon = excluded.icon,
         tag = excluded.tag,
         thread_status = excluded.thread_status,
+        branch = excluded.branch,
         created_at = excluded.created_at,
         updated_at = excluded.updated_at
     `,

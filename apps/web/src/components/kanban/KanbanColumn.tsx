@@ -28,9 +28,10 @@ interface KanbanColumnProps {
   column: KanbanColumnId;
   tasks: KanbanTask[];
   projectId: string;
+  workspaceRoot?: string;
 }
 
-export function KanbanColumn({ column, tasks, projectId }: KanbanColumnProps) {
+export function KanbanColumn({ column, tasks, projectId, workspaceRoot }: KanbanColumnProps) {
   const [createOpen, setCreateOpen] = useState(false);
   const { setNodeRef, isOver } = useDroppable({ id: column });
 
@@ -96,7 +97,12 @@ export function KanbanColumn({ column, tasks, projectId }: KanbanColumnProps) {
       </div>
 
       {isWaiting && (
-        <KanbanTaskModal open={createOpen} onOpenChange={setCreateOpen} projectId={projectId} />
+        <KanbanTaskModal
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+          projectId={projectId}
+          workspaceRoot={workspaceRoot}
+        />
       )}
     </>
   );

@@ -30,6 +30,7 @@ import Migration0015 from "./Migrations/015_KanbanPlanningColumn.ts";
 import Migration0016 from "./Migrations/016_KanbanTaskColorIcon.ts";
 import Migration0017 from "./Migrations/017_KanbanTaskTag.ts";
 import Migration0018 from "./Migrations/018_KanbanTaskThreadStatus.ts";
+import Migration0019 from "./Migrations/019_KanbanTaskBranch.ts";
 import { Effect } from "effect";
 
 /**
@@ -61,6 +62,7 @@ const loader = Migrator.fromRecord({
   "16_KanbanTaskColorIcon": Migration0016,
   "17_KanbanTaskTag": Migration0017,
   "18_KanbanTaskThreadStatus": Migration0018,
+  "19_KanbanTaskBranch": Migration0019,
 });
 
 /**

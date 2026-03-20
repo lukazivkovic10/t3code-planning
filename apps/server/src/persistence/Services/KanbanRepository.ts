@@ -29,6 +29,7 @@ export const KanbanTaskRow = Schema.Struct({
   icon: Schema.NullOr(Schema.String),
   tag: Schema.NullOr(Schema.String),
   threadStatus: Schema.NullOr(KanbanThreadStatus),
+  branch: Schema.NullOr(Schema.String),
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,
 });

@@ -364,6 +364,7 @@ export function KanbanBoard({
               column={column}
               tasks={getTasksByColumn(column)}
               projectId={projectId}
+              workspaceRoot={workspaceRoot}
             />
           ))}
         </div>
@@ -374,6 +375,7 @@ export function KanbanBoard({
         open={isNewTaskOpen}
         onOpenChange={setIsNewTaskOpen}
         projectId={projectId}
+        workspaceRoot={workspaceRoot}
       />
     </div>
   );

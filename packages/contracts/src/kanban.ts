@@ -73,6 +73,7 @@ export const KanbanTask = Schema.Struct({
   icon: Schema.NullOr(Schema.String),
   tag: Schema.NullOr(Schema.String),
   threadStatus: Schema.NullOr(KanbanThreadStatus),
+  branch: Schema.NullOr(Schema.String),
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,
 });
@@ -124,6 +125,7 @@ export const KanbanCreateTaskInput = Schema.Struct({
   color: Schema.optional(Schema.NullOr(Schema.String)),
   icon: Schema.optional(Schema.NullOr(Schema.String)),
   tag: Schema.optional(Schema.NullOr(Schema.String)),
+  branch: Schema.optional(Schema.NullOr(Schema.String)),
 });
 export type KanbanCreateTaskInput = typeof KanbanCreateTaskInput.Type;
 
@@ -134,6 +136,7 @@ export const KanbanUpdateTaskInput = Schema.Struct({
   color: Schema.optional(Schema.NullOr(Schema.String)),
   icon: Schema.optional(Schema.NullOr(Schema.String)),
   tag: Schema.optional(Schema.NullOr(Schema.String)),
+  branch: Schema.optional(Schema.NullOr(Schema.String)),
 });
 export type KanbanUpdateTaskInput = typeof KanbanUpdateTaskInput.Type;
 
