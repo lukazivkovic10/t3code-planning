@@ -37,7 +37,9 @@ export function KanbanCard({ task }: KanbanCardProps) {
     ((task.column === "in_progress" || task.column === "testing") &&
       task.linkedThreadId !== null);
   const isThreadIdle = task.threadStatus === "idle" && task.linkedThreadId !== null;
-  const isDraggable = task.column === "waiting" || task.column === "planning";
+  const isDraggable =
+    task.column === "waiting" ||
+    (task.column === "planning" && task.threadStatus !== "running");
   const hasErrors = task.errorComments.length > 0 && task.column === "waiting";
   const hasTodos = task.todos.length > 0 && task.column === "planning";
   const acceptedTodoCount = task.todos.filter((t) => t.accepted).length;

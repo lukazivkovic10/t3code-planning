@@ -197,6 +197,19 @@ export function KanbanBoard({
 
     if (!isAllowedMove) return;
 
+    // Block moving from planning to in_progress while planning agent is still running
+    if (
+      task.column === "planning" &&
+      targetColumn === "in_progress" &&
+      task.threadStatus === "running"
+    ) {
+      toastManager.add({
+        type: "warning",
+        title: "Planning is still in progress — wait for the AI to finish before moving to In Progress.",
+      });
+      return;
+    }
+
     // Block moves from New when Codex is not authenticated
     if (task.column === "waiting" && codexAuthError) {
       toastManager.add({
