@@ -138,6 +138,7 @@ const makeKanbanRepository = Effect.gen(function* () {
         icon,
         tag,
         thread_status AS "threadStatus",
+        branch,
         created_at AS "createdAt",
         updated_at AS "updatedAt"
       FROM kanban_tasks
@@ -164,6 +165,7 @@ const makeKanbanRepository = Effect.gen(function* () {
         icon,
         tag,
         thread_status AS "threadStatus",
+        branch,
         created_at AS "createdAt",
         updated_at AS "updatedAt"
       FROM kanban_tasks
