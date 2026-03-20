@@ -198,7 +198,7 @@ const makeKanbanService = Effect.gen(function* () {
           message: {
             messageId: MessageId.makeUnsafe(crypto.randomUUID()),
             role: "user",
-            text: `${planningPrompt}\n\nTask: ${existing.title}\n\n${existing.description}`,
+            text: `${planningPrompt}\n\nTask: ${existing.title}\n\n${existing.description}${existing.branch ? `\n\nBranch: ${existing.branch}` : ""}`,
             attachments: [],
           },
           runtimeMode: "full-access",
@@ -282,7 +282,7 @@ const makeKanbanService = Effect.gen(function* () {
           message: {
             messageId: MessageId.makeUnsafe(crypto.randomUUID()),
             role: "user",
-            text: `${inProgressPrompt}\n\nTask: ${existing.title}\n\n${existing.description}${planContext}`,
+            text: `${inProgressPrompt}\n\nTask: ${existing.title}\n\n${existing.description}${planContext}${existing.branch ? `\n\nBranch: ${existing.branch}` : ""}`,
             attachments: [],
           },
           runtimeMode: "full-access",

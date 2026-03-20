@@ -247,7 +247,7 @@ const make = Effect.gen(function* () {
         message: {
           messageId: MessageId.makeUnsafe(crypto.randomUUID()),
           role: "user",
-          text: `${testingPrompt}\n\nTask: ${task.title}\n\n${task.description}`,
+          text: `${testingPrompt}\n\nTask: ${task.title}\n\n${task.description}${task.branch ? `\n\nBranch: ${task.branch}` : ""}`,
           attachments: [],
         },
         runtimeMode: "full-access",
