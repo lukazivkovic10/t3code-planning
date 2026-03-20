@@ -183,7 +183,7 @@ const makeKanbanService = Effect.gen(function* () {
           projectId: existing.projectId,
           title: `Planning: ${existing.title}`,
           model,
-          interactionMode: "plan",
+          interactionMode: "default",
           runtimeMode: "full-access",
           branch: existing.branch,
           worktreePath: null,
@@ -194,7 +194,7 @@ const makeKanbanService = Effect.gen(function* () {
           type: "thread.turn.start",
           commandId: serverCommandId("kanban-planning-turn-start"),
           threadId: newThreadId,
-          interactionMode: "plan",
+          interactionMode: "default",
           message: {
             messageId: MessageId.makeUnsafe(crypto.randomUUID()),
             role: "user",
