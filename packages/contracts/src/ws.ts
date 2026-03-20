@@ -12,6 +12,20 @@ import {
   OrchestrationReplayEventsInput,
 } from "./orchestration";
 import {
+  KANBAN_WS_METHODS,
+  KANBAN_WS_CHANNELS,
+  KanbanGetBoardConfigInput,
+  KanbanUpdateBoardConfigInput,
+  KanbanListTasksInput,
+  KanbanCreateTaskInput,
+  KanbanUpdateTaskInput,
+  KanbanMoveTaskInput,
+  KanbanStopTaskInput,
+  KanbanDeleteTaskInput,
+  KanbanUpdateTaskTodosInput,
+  KanbanDomainEvent,
+} from "./kanban";
+import {
   GitCheckoutInput,
   GitCreateBranchInput,
   GitPreparePullRequestThreadInput,
@@ -34,7 +48,7 @@ import {
   TerminalWriteInput,
 } from "./terminal";
 import { KeybindingRule } from "./keybindings";
-import { ProjectSearchEntriesInput, ProjectWriteFileInput } from "./project";
+import { ProjectSearchEntriesInput, ProjectWriteFileInput, ProjectReadFileInput } from "./project";
 import { OpenInEditorInput } from "./editor";
 import { ServerConfigUpdatedPayload } from "./server";
 
@@ -47,6 +61,7 @@ export const WS_METHODS = {
   projectsRemove: "projects.remove",
   projectsSearchEntries: "projects.searchEntries",
   projectsWriteFile: "projects.writeFile",
+  projectsReadFile: "projects.readFile",
 
   // Shell methods
   shellOpenInEditor: "shell.openInEditor",
@@ -75,6 +90,9 @@ export const WS_METHODS = {
   // Server meta
   serverGetConfig: "server.getConfig",
   serverUpsertKeybinding: "server.upsertKeybinding",
+
+  // Kanban methods (re-exported for convenience)
+  ...KANBAN_WS_METHODS,
 } as const;
 
 // ── Push Event Channels ──────────────────────────────────────────────
@@ -83,6 +101,9 @@ export const WS_CHANNELS = {
   terminalEvent: "terminal.event",
   serverWelcome: "server.welcome",
   serverConfigUpdated: "server.configUpdated",
+
+  // Kanban channels (re-exported for convenience)
+  ...KANBAN_WS_CHANNELS,
 } as const;
 
 // -- Tagged Union of all request body schemas ─────────────────────────
@@ -111,6 +132,7 @@ const WebSocketRequestBody = Schema.Union([
   // Project Search
   tagRequestBody(WS_METHODS.projectsSearchEntries, ProjectSearchEntriesInput),
   tagRequestBody(WS_METHODS.projectsWriteFile, ProjectWriteFileInput),
+  tagRequestBody(WS_METHODS.projectsReadFile, ProjectReadFileInput),
 
   // Shell methods
   tagRequestBody(WS_METHODS.shellOpenInEditor, OpenInEditorInput),
@@ -139,6 +161,17 @@ const WebSocketRequestBody = Schema.Union([
   // Server meta
   tagRequestBody(WS_METHODS.serverGetConfig, Schema.Struct({})),
   tagRequestBody(WS_METHODS.serverUpsertKeybinding, KeybindingRule),
+
+  // Kanban methods
+  tagRequestBody(KANBAN_WS_METHODS.getBoardConfig, KanbanGetBoardConfigInput),
+  tagRequestBody(KANBAN_WS_METHODS.updateBoardConfig, KanbanUpdateBoardConfigInput),
+  tagRequestBody(KANBAN_WS_METHODS.listTasks, KanbanListTasksInput),
+  tagRequestBody(KANBAN_WS_METHODS.createTask, KanbanCreateTaskInput),
+  tagRequestBody(KANBAN_WS_METHODS.updateTask, KanbanUpdateTaskInput),
+  tagRequestBody(KANBAN_WS_METHODS.moveTask, KanbanMoveTaskInput),
+  tagRequestBody(KANBAN_WS_METHODS.stopTask, KanbanStopTaskInput),
+  tagRequestBody(KANBAN_WS_METHODS.deleteTask, KanbanDeleteTaskInput),
+  tagRequestBody(KANBAN_WS_METHODS.updateTaskTodos, KanbanUpdateTaskTodosInput),
 ]);
 
 export const WebSocketRequest = Schema.Struct({
@@ -174,6 +207,7 @@ export interface WsPushPayloadByChannel {
   readonly [WS_CHANNELS.serverConfigUpdated]: typeof ServerConfigUpdatedPayload.Type;
   readonly [WS_CHANNELS.terminalEvent]: typeof TerminalEvent.Type;
   readonly [ORCHESTRATION_WS_CHANNELS.domainEvent]: OrchestrationEvent;
+  readonly [KANBAN_WS_CHANNELS.domainEvent]: KanbanDomainEvent;
 }
 
 export type WsPushChannel = keyof WsPushPayloadByChannel;
@@ -201,11 +235,17 @@ export const WsPushOrchestrationDomainEvent = makeWsPushSchema(
   OrchestrationEvent,
 );
 
+export const WsPushKanbanDomainEvent = makeWsPushSchema(
+  KANBAN_WS_CHANNELS.domainEvent,
+  KanbanDomainEvent,
+);
+
 export const WsPushChannelSchema = Schema.Literals([
   WS_CHANNELS.serverWelcome,
   WS_CHANNELS.serverConfigUpdated,
   WS_CHANNELS.terminalEvent,
   ORCHESTRATION_WS_CHANNELS.domainEvent,
+  KANBAN_WS_CHANNELS.domainEvent,
 ]);
 export type WsPushChannelSchema = typeof WsPushChannelSchema.Type;
 
@@ -214,6 +254,7 @@ export const WsPush = Schema.Union([
   WsPushServerConfigUpdated,
   WsPushTerminalEvent,
   WsPushOrchestrationDomainEvent,
+  WsPushKanbanDomainEvent,
 ]);
 export type WsPush = typeof WsPush.Type;
 

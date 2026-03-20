@@ -23,6 +23,8 @@ import type {
   ProjectSearchEntriesResult,
   ProjectWriteFileInput,
   ProjectWriteFileResult,
+  ProjectReadFileInput,
+  ProjectReadFileResult,
 } from "./project";
 import type { ServerConfig } from "./server";
 import type {
@@ -46,6 +48,19 @@ import type {
   OrchestrationReadModel,
 } from "./orchestration";
 import { EditorId } from "./editor";
+import type {
+  KanbanBoardConfig,
+  KanbanDomainEvent,
+  KanbanGetBoardConfigInput,
+  KanbanUpdateBoardConfigInput,
+  KanbanListTasksInput,
+  KanbanCreateTaskInput,
+  KanbanUpdateTaskInput,
+  KanbanMoveTaskInput,
+  KanbanStopTaskInput,
+  KanbanDeleteTaskInput,
+  KanbanTask,
+} from "./kanban";
 
 export interface ContextMenuItem<T extends string = string> {
   id: T;
@@ -128,6 +143,7 @@ export interface NativeApi {
   projects: {
     searchEntries: (input: ProjectSearchEntriesInput) => Promise<ProjectSearchEntriesResult>;
     writeFile: (input: ProjectWriteFileInput) => Promise<ProjectWriteFileResult>;
+    readFile: (input: ProjectReadFileInput) => Promise<ProjectReadFileResult>;
   };
   shell: {
     openInEditor: (cwd: string, editor: EditorId) => Promise<void>;
@@ -169,5 +185,16 @@ export interface NativeApi {
     ) => Promise<OrchestrationGetFullThreadDiffResult>;
     replayEvents: (fromSequenceExclusive: number) => Promise<OrchestrationEvent[]>;
     onDomainEvent: (callback: (event: OrchestrationEvent) => void) => () => void;
+  };
+  kanban: {
+    getBoardConfig: (input: KanbanGetBoardConfigInput) => Promise<KanbanBoardConfig>;
+    updateBoardConfig: (input: KanbanUpdateBoardConfigInput) => Promise<KanbanBoardConfig>;
+    listTasks: (input: KanbanListTasksInput) => Promise<KanbanTask[]>;
+    createTask: (input: KanbanCreateTaskInput) => Promise<KanbanTask>;
+    updateTask: (input: KanbanUpdateTaskInput) => Promise<KanbanTask>;
+    moveTask: (input: KanbanMoveTaskInput) => Promise<KanbanTask>;
+    stopTask: (input: KanbanStopTaskInput) => Promise<KanbanTask>;
+    deleteTask: (input: KanbanDeleteTaskInput) => Promise<void>;
+    onDomainEvent: (callback: (event: KanbanDomainEvent) => void) => () => void;
   };
 }

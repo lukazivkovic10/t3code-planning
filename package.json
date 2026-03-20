@@ -22,9 +22,9 @@
   },
   "type": "module",
   "scripts": {
-    "dev": "node scripts/dev-runner.ts dev",
-    "dev:server": "node scripts/dev-runner.ts dev:server",
-    "dev:web": "node scripts/dev-runner.ts dev:web",
+    "dev": "bun scripts/dev-runner.ts dev",
+    "dev:server": "bun scripts/dev-runner.ts dev:server",
+    "dev:web": "bun scripts/dev-runner.ts dev:web",
     "dev:marketing": "turbo run dev --filter=@t3tools/marketing",
     "dev:desktop": "node scripts/dev-runner.ts dev:desktop",
     "start": "turbo run start --filter=t3",
@@ -58,6 +58,7 @@
     "vitest": "catalog:"
   },
   "overrides": {
+    "@effect/platform-node-shared": "https://pkg.pr.new/Effect-TS/effect-smol/@effect/platform-node-shared@d53a9a758bd6321ffd97432769bd0e9fac486999",
     "vite": "^8.0.0"
   },
   "engines": {

@@ -1,7 +1,10 @@
 import {
+  KANBAN_WS_CHANNELS,
+  KANBAN_WS_METHODS,
   ORCHESTRATION_WS_CHANNELS,
   ORCHESTRATION_WS_METHODS,
   type ContextMenuItem,
+  type KanbanDomainEvent,
   type NativeApi,
   ServerConfigUpdatedPayload,
   WS_CHANNELS,
@@ -114,6 +117,7 @@ export function createWsNativeApi(): NativeApi {
     projects: {
       searchEntries: (input) => transport.request(WS_METHODS.projectsSearchEntries, input),
       writeFile: (input) => transport.request(WS_METHODS.projectsWriteFile, input),
+      readFile: (input) => transport.request(WS_METHODS.projectsReadFile, input),
     },
     shell: {
       openInEditor: (cwd, editor) =>
@@ -173,6 +177,24 @@ export function createWsNativeApi(): NativeApi {
       onDomainEvent: (callback) =>
         transport.subscribe(ORCHESTRATION_WS_CHANNELS.domainEvent, (message) =>
           callback(message.data),
+        ),
+    },
+    kanban: {
+      getBoardConfig: (input) =>
+        transport.request(KANBAN_WS_METHODS.getBoardConfig, input) as never,
+      updateBoardConfig: (input) =>
+        transport.request(KANBAN_WS_METHODS.updateBoardConfig, input) as never,
+      listTasks: (input) => transport.request(KANBAN_WS_METHODS.listTasks, input) as never,
+      createTask: (input) => transport.request(KANBAN_WS_METHODS.createTask, input) as never,
+      updateTask: (input) => transport.request(KANBAN_WS_METHODS.updateTask, input) as never,
+      moveTask: (input) => transport.request(KANBAN_WS_METHODS.moveTask, input) as never,
+      stopTask: (input) => transport.request(KANBAN_WS_METHODS.stopTask, input) as never,
+      deleteTask: (input) => transport.request(KANBAN_WS_METHODS.deleteTask, input) as never,
+      updateTaskTodos: (input) =>
+        transport.request(KANBAN_WS_METHODS.updateTaskTodos, input) as never,
+      onDomainEvent: (callback) =>
+        transport.subscribe(KANBAN_WS_CHANNELS.domainEvent, (message) =>
+          callback(message.data as KanbanDomainEvent),
         ),
     },
   };
